@@ -16,6 +16,9 @@
   <p>A node that stores a string. Click the "Pick" button to choose one of the hard-coded options.</p>
 </script>
 
+<script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
+<link rel="stylesheet" href="resources/node-red-contrib-mqtt-picker/treeview.css">
+
 <script type="text/javascript">
   RED.nodes.registerType('string-picker',{
     category: 'function',
@@ -28,101 +31,91 @@
     outputs:1,
     icon: "font-awesome/fa-font",
     label: function() {
-      return this.name||this.picked||"string-picker";
+      return this.name || this.picked || "string-picker";
     },
     oneditprepare: function() {
       var node = this;
-      $("#node-input-topic-pickbtn").on('click', function(e) {
+      document.querySelector("#node-input-topic-pickbtn").onclick = (e) => {
         e.preventDefault();
 
-        // Example hierarchical data (hard-coded). You can expand this or make it configurable later.
         var treeData = [
-          {label: 'Group 1', children: [
-            {label: 'Option A', value: 'Option A'},
-            {label: 'Option B', value: 'Option B'}
+          {id: 'A', children: [
+            {id: 'A.1'},
+            {id: 'A.2'}
           ]},
-          {label: 'Group 2', children: [
-            {label: 'Subgroup 2.1', children: [
-              {label: 'Option C', value: 'Option C'},
-              {label: 'Option D', value: 'Option D'}
+          {id: 'B', children: [
+            {id: 'B.1', children: [
+              {id: 'B.1.1'},
+              {id: 'B.1.2'}
             ]},
-            {label: 'Option E', value: 'Option E'}
+            {id: 'B.2'}
           ]},
-          {label: 'Option F', value: 'Option F'}
+          {id: 'C'}
         ];
 
+        let _selectedValue = null;
+
         function buildTree(nodes) {
-          var $ul = $('<ul class="sp-tree-root" style="list-style:none; margin:0; padding-left:16px;">');
-          nodes.forEach(function(n){
-            var hasChildren = Array.isArray(n.children) && n.children.length>0;
-            var $li = $('<li class="sp-node-li" style="margin:4px 0;">');
-            var $row = $('<div class="sp-row" style="display:flex; align-items:center;">');
-            if (hasChildren) {
-              var $toggle = $('<span class="sp-toggle" style="cursor:pointer; width:16px; display:inline-block;">\u25B6</span>');
-              $row.append($toggle);
-            } else {
-              $row.append($('<span style="width:16px; display:inline-block;"></span>'));
+          var div = document.createElement('div');
+          div.id = "sp-mqtt-picker";
+
+            try {
+              var tree = new Treeview({
+                container: div,
+                data: nodes,
+                nodeNameKey: "id",
+                searchEnabled: true,
+                initiallyExpanded: false,
+                multiSelectEnabled: false,
+                onSelectionChange: function(selectedArray) {
+                  if (selectedArray && selectedArray.length > 0) {
+                    _selectedValue = selectedArray[0].id;
+                  } else {
+                    _selectedValue = null;
+                  }
+                },
+                onRenderNode: function(nodeData, nodeContentWrapperElement) {
+                  nodeContentWrapperElement.innerHTML = '';
+                  var span = document.createElement('span');
+                  span.className = 'treeview-node-text';
+                  const lastDotPos = nodeData.id.lastIndexOf(".");
+                  const name = nodeData.id.substring(lastDotPos + 1);
+                  span.textContent = name;
+                  nodeContentWrapperElement.appendChild(span);
+                }
+              });
+            } catch (e) {
+              console.error('Quercus Treeview initialization failed:', e);
             }
-            var $label = $('<span class="sp-label" style="padding:2px 6px; flex:1;">').text(n.label);
-            if (!hasChildren) {
-              $label.css('cursor','pointer');
-              $label.addClass('sp-leaf');
-              $label.data('value', n.value);
-            } else {
-              $label.addClass('sp-parent');
-            }
-            $row.append($label);
-            $li.append($row);
-            if (hasChildren) {
-              var $child = buildTree(n.children);
-              $child.hide();
-              $li.append($child);
-            }
-            $ul.append($li);
-          });
-          return $ul;
+
+          return div;
         }
 
-        var $content = $('<div class="string-picker-dialog">').css({padding:'8px'});
-        var $tree = buildTree(treeData);
-        $tree.css({maxHeight:'320px', overflow:'auto', border:'1px solid #ddd', padding:'8px', 'background-color':'#fff'});
-        $content.append($tree);
+        var content = document.createElement("div");
+        content.class="string-picker-dialog";
+        content.style="padding: 8px";
+        var tree = buildTree(treeData);
+        tree.style = "max-height: 320px; overflow: auto; border: 1px solid #ddd; padding: 8px; background:#fff;";
+        content.append(tree);
 
-        // selection handling
-        $content.on('click', '.sp-toggle', function(){
-          var $t = $(this);
-          var $li = $t.closest('li');
-          var $child = $li.children('ul');
-          if ($child.is(':visible')){
-            $child.slideUp(100);
-            $t.html('\u25B6');
-          } else {
-            $child.slideDown(100);
-            $t.html('\u25BC');
-          }
-        });
-        $content.on('click', '.sp-leaf', function(){
-          $content.find('.sp-label').removeClass('sp-selected').css('background','');
-          $(this).addClass('sp-selected').css('background','#dbeeff');
-        });
-
-        var d = $content.dialog({
+        var d = $(content).dialog({
           title: 'Pick a string',
           modal: true,
-          width: 420,
+          width: "90vw",
+          minHeight: "90vh",
           buttons: {
             Ok: function() {
-              var val = $content.find('.sp-leaf.sp-selected').data('value');
+              var val = (typeof _selectedValue !== 'undefined' && _selectedValue !== null) ? _selectedValue : content.find('.sp-leaf.sp-selected').data('value');
               if (val !== undefined) {
-                $("#node-input-picked").val(val);
+                document.querySelector("#node-input-topic").value = val;
               }
               d.dialog('close').remove();
             },
             Cancel: function() { d.dialog('close').remove(); }
           },
-          close: function(){ $(this).remove(); }
+          close: function(){ this.remove(); }
         });
-      });
+      };
     }
   });
 </script>
