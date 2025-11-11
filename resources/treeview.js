@@ -42,7 +42,7 @@
     class Treeview {
         constructor(options) {
             this.options = {
-                containerId: null,
+                container: null,
                 data: [],
                 searchEnabled: false,
                 searchPlaceholder: 'Search tree...',
@@ -74,17 +74,11 @@
         }
 
         _initialize() {
-            if (!this.options.containerId) {
-                console.error("Quercus.js: containerId is required.");
+            if (!this.options.container) {
+                console.error("Quercus.js: container is required.");
                 return;
             }
-
-            this.treeviewContainer = document.getElementById(this.options.containerId);
-            if (!this.treeviewContainer) {
-                console.error(`Quercus.js: Element with ID '${this.options.containerId}' not found.`);
-                return;
-            }
-
+            this.treeviewContainer = this.options.container;
             this.treeviewContainer.classList.add('custom-treeview-wrapper');
 
             this._createControls();
@@ -176,7 +170,7 @@
 
                 this.treeSearchInput = document.createElement('input');
                 this.treeSearchInput.type = 'text';
-                this.treeSearchInput.id = `treeSearch-${this.options.containerId}`;
+                this.treeSearchInput.id = `treeSearch-${this.options.container.id}`;
                 this.treeSearchInput.placeholder = this.options.searchPlaceholder; // Use the new option here
                 this.treeSearchInput.classList.add('treeview-search-input');
                 searchInputWrapper.appendChild(this.treeSearchInput);
