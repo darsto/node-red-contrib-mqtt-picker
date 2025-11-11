@@ -1,0 +1,8 @@
+{
+  "name": "dev-data",
+  "private": true,
+  "description": "Data dir for launching node-red with the plugin",
+  "dependencies": {
+    "node-red-contrib-string-picker": "file:.."
+  }
+}

@@ -1,0 +1,128 @@
+<script type="text/x-red" data-template-name="string-picker">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+  <div class="form-row">
+    <label for="node-input-topic"><i class="fa fa-font"></i> Value</label>
+    <div style="width: 70%; display: inline-flex;">
+        <input type="text" id="node-input-topic" style="flex-grow: 1" placeholder="Topic" autocomplete="off">
+        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-pencil"></i></a></div>
+    </div>
+  </div>
+</script>
+
+<script type="text/x-red" data-help-name="string-picker">
+  <p>A node that stores a string. Click the "Pick" button to choose one of the hard-coded options.</p>
+</script>
+
+<script type="text/javascript">
+  RED.nodes.registerType('string-picker',{
+    category: 'function',
+    color: '#a6bbcf',
+    defaults: {
+      name: {value: ""},
+      topic: {value: ""}
+    },
+    inputs:1,
+    outputs:1,
+    icon: "font-awesome/fa-font",
+    label: function() {
+      return this.name||this.picked||"string-picker";
+    },
+    oneditprepare: function() {
+      var node = this;
+      $("#node-input-topic-pickbtn").on('click', function(e) {
+        e.preventDefault();
+
+        // Example hierarchical data (hard-coded). You can expand this or make it configurable later.
+        var treeData = [
+          {label: 'Group 1', children: [
+            {label: 'Option A', value: 'Option A'},
+            {label: 'Option B', value: 'Option B'}
+          ]},
+          {label: 'Group 2', children: [
+            {label: 'Subgroup 2.1', children: [
+              {label: 'Option C', value: 'Option C'},
+              {label: 'Option D', value: 'Option D'}
+            ]},
+            {label: 'Option E', value: 'Option E'}
+          ]},
+          {label: 'Option F', value: 'Option F'}
+        ];
+
+        function buildTree(nodes) {
+          var $ul = $('<ul class="sp-tree-root" style="list-style:none; margin:0; padding-left:16px;">');
+          nodes.forEach(function(n){
+            var hasChildren = Array.isArray(n.children) && n.children.length>0;
+            var $li = $('<li class="sp-node-li" style="margin:4px 0;">');
+            var $row = $('<div class="sp-row" style="display:flex; align-items:center;">');
+            if (hasChildren) {
+              var $toggle = $('<span class="sp-toggle" style="cursor:pointer; width:16px; display:inline-block;">\u25B6</span>');
+              $row.append($toggle);
+            } else {
+              $row.append($('<span style="width:16px; display:inline-block;"></span>'));
+            }
+            var $label = $('<span class="sp-label" style="padding:2px 6px; flex:1;">').text(n.label);
+            if (!hasChildren) {
+              $label.css('cursor','pointer');
+              $label.addClass('sp-leaf');
+              $label.data('value', n.value);
+            } else {
+              $label.addClass('sp-parent');
+            }
+            $row.append($label);
+            $li.append($row);
+            if (hasChildren) {
+              var $child = buildTree(n.children);
+              $child.hide();
+              $li.append($child);
+            }
+            $ul.append($li);
+          });
+          return $ul;
+        }
+
+        var $content = $('<div class="string-picker-dialog">').css({padding:'8px'});
+        var $tree = buildTree(treeData);
+        $tree.css({maxHeight:'320px', overflow:'auto', border:'1px solid #ddd', padding:'8px', 'background-color':'#fff'});
+        $content.append($tree);
+
+        // selection handling
+        $content.on('click', '.sp-toggle', function(){
+          var $t = $(this);
+          var $li = $t.closest('li');
+          var $child = $li.children('ul');
+          if ($child.is(':visible')){
+            $child.slideUp(100);
+            $t.html('\u25B6');
+          } else {
+            $child.slideDown(100);
+            $t.html('\u25BC');
+          }
+        });
+        $content.on('click', '.sp-leaf', function(){
+          $content.find('.sp-label').removeClass('sp-selected').css('background','');
+          $(this).addClass('sp-selected').css('background','#dbeeff');
+        });
+
+        var d = $content.dialog({
+          title: 'Pick a string',
+          modal: true,
+          width: 420,
+          buttons: {
+            Ok: function() {
+              var val = $content.find('.sp-leaf.sp-selected').data('value');
+              if (val !== undefined) {
+                $("#node-input-picked").val(val);
+              }
+              d.dialog('close').remove();
+            },
+            Cancel: function() { d.dialog('close').remove(); }
+          },
+          close: function(){ $(this).remove(); }
+        });
+      });
+    }
+  });
+</script>
