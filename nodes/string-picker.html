@@ -17,105 +17,103 @@
 </script>
 
 <script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
-<link rel="stylesheet" href="resources/node-red-contrib-mqtt-picker/treeview.css">
+<link
+  rel="stylesheet"
+  href="resources/node-red-contrib-mqtt-picker/treeview.css"
+/>
+<script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
 
 <script type="text/javascript">
-  RED.nodes.registerType('string-picker',{
-    category: 'function',
-    color: '#a6bbcf',
+  RED.nodes.registerType("string-picker", {
+    category: "function",
+    color: "#a6bbcf",
     defaults: {
-      name: {value: ""},
-      topic: {value: ""}
+      name: { value: "" },
+      topic: { value: "" },
     },
-    inputs:1,
-    outputs:1,
+    inputs: 1,
+    outputs: 1,
     icon: "font-awesome/fa-font",
-    label: function() {
+    label: () => {
       return this.name || this.picked || "string-picker";
     },
-    oneditprepare: function() {
-      var node = this;
+    oneditprepare: () => {
       document.querySelector("#node-input-topic-pickbtn").onclick = (e) => {
         e.preventDefault();
 
-        var treeData = [
-          {id: 'A', children: [
-            {id: 'A.1'},
-            {id: 'A.2'}
-          ]},
-          {id: 'B', children: [
-            {id: 'B.1', children: [
-              {id: 'B.1.1'},
-              {id: 'B.1.2'}
-            ]},
-            {id: 'B.2'}
-          ]},
-          {id: 'C'}
+        const data = [
+          { id: "A", children: [{ id: "A.1" }, { id: "A.2" }] },
+          {
+            id: "B",
+            children: [
+              { id: "B.1", children: [{ id: "B.1.1" }, { id: "B.1.2" }] },
+              { id: "B.2" },
+            ],
+          },
+          { id: "C" },
         ];
 
-        let _selectedValue = null;
-
-        function buildTree(nodes) {
-          var div = document.createElement('div');
-          div.id = "sp-mqtt-picker";
-
-            try {
-              var tree = new Treeview({
-                container: div,
-                data: nodes,
-                nodeNameKey: "id",
-                searchEnabled: true,
-                initiallyExpanded: false,
-                multiSelectEnabled: false,
-                onSelectionChange: function(selectedArray) {
-                  if (selectedArray && selectedArray.length > 0) {
-                    _selectedValue = selectedArray[0].id;
-                  } else {
-                    _selectedValue = null;
-                  }
-                },
-                onRenderNode: function(nodeData, nodeContentWrapperElement) {
-                  nodeContentWrapperElement.innerHTML = '';
-                  var span = document.createElement('span');
-                  span.className = 'treeview-node-text';
-                  const lastDotPos = nodeData.id.lastIndexOf(".");
-                  const name = nodeData.id.substring(lastDotPos + 1);
-                  span.textContent = name;
-                  nodeContentWrapperElement.appendChild(span);
-                }
-              });
-            } catch (e) {
-              console.error('Quercus Treeview initialization failed:', e);
-            }
-
-          return div;
+        for (let i = 0; i < 70; i++) {
+          data.push({ id: "C" });
         }
 
-        var content = document.createElement("div");
-        content.class="string-picker-dialog";
-        content.style="padding: 8px";
-        var tree = buildTree(treeData);
-        tree.style = "max-height: 320px; overflow: auto; border: 1px solid #ddd; padding: 8px; background:#fff;";
-        content.append(tree);
+        const dialog = document.createElement("div");
+        const tree_div = document.createElement("div");
+        tree_div.id = "sp-mqtt-picker";
+        tree_div.style =
+          "max-height: 90vh; overflow: auto; border: 1px solid #ddd; padding: 8px; background:#fff;";
+        dialog.append(tree_div);
 
-        var d = $(content).dialog({
-          title: 'Pick a string',
+        let selected = null;
+        const tree = new Treeview({
+          container: tree_div,
+          data,
+          nodeNameKey: "id",
+          searchEnabled: true,
+          initiallyExpanded: false,
+          multiSelectEnabled: false,
+          onSelectionChange: (selectedArray) => {
+            if (selectedArray && selectedArray.length > 0) {
+              selected = selectedArray[0].id;
+            } else {
+              selected = null;
+            }
+          },
+          onRenderNode: (nodeData, nodeContentWrapperElement) => {
+            nodeContentWrapperElement.innerHTML = "";
+            const span = document.createElement("span");
+            span.className = "treeview-node-text";
+            const lastDotPos = nodeData.id.lastIndexOf(".");
+            const name = nodeData.id.substring(lastDotPos + 1);
+            span.textContent = name;
+            nodeContentWrapperElement.appendChild(span);
+          },
+        });
+
+        $(dialog).dialog({
+          title: "Pick a string",
           modal: true,
           width: "90vw",
-          minHeight: "90vh",
+          minHeight: 0,
           buttons: {
-            Ok: function() {
-              var val = (typeof _selectedValue !== 'undefined' && _selectedValue !== null) ? _selectedValue : content.find('.sp-leaf.sp-selected').data('value');
-              if (val !== undefined) {
-                document.querySelector("#node-input-topic").value = val;
+            Ok: () => {
+              if (selected) {
+                document.querySelector("#node-input-topic").value = selected;
               }
-              d.dialog('close').remove();
+              d.dialog("close").remove();
             },
-            Cancel: function() { d.dialog('close').remove(); }
+            Cancel: () => {
+              d.dialog("close").remove();
+            },
           },
-          close: function(){ this.remove(); }
+          create: () => {
+            $(this).css("maxHeight", "90vh");
+          },
+          close: () => {
+            this.remove();
+          },
         });
       };
-    }
+    },
   });
 </script>
