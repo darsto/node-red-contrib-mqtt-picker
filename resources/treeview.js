@@ -88,8 +88,6 @@
             if (this.options.initiallyExpanded) {
                 this.treeviewContainer.querySelectorAll('li.has-children').forEach(li => {
                     li.classList.add('expanded');
-                    const expander = li.querySelector('.treeview-expander');
-                    if (expander) expander.textContent = '-';
                     const childUl = li.querySelector('ul');
                     if (childUl) {
                         childUl.style.height = 'auto'; // Ensure it's fully expanded
@@ -98,8 +96,6 @@
             } else {
                 this.treeviewContainer.querySelectorAll('li.has-children').forEach(li => {
                     li.classList.remove('expanded');
-                    const expander = li.querySelector('.treeview-expander');
-                    if (expander) expander.textContent = '+';
                     const childUl = li.querySelector('ul');
                     if (childUl) {
                         childUl.style.height = ''; // Reset height to allow CSS to manage (collapse)
@@ -309,8 +305,6 @@
             allExpandableNodes.forEach(li => {
                 if (!li.classList.contains('expanded')) {
                     li.classList.add('expanded');
-                    const expander = li.querySelector('.treeview-expander');
-                    if (expander) expander.textContent = '-';
                     const childUl = li.querySelector('ul');
                     if (childUl) {
                         // Set height to 0 to prepare for transition
@@ -337,8 +331,6 @@
                 const li = allExpandableNodes[i];
                 if (li.classList.contains('expanded')) {
                     li.classList.remove('expanded');
-                    const expander = li.querySelector('.treeview-expander');
-                    if (expander) expander.textContent = '+';
                     const childUl = li.querySelector('ul');
                     if (childUl) {
                         childUl.style.height = `${childUl.scrollHeight}px`; // Lock height for animation
@@ -398,7 +390,7 @@
                     li.classList.add('has-children');
                     expanderOrPlaceholder = document.createElement('span');
                     expanderOrPlaceholder.classList.add('treeview-expander');
-                    expanderOrPlaceholder.textContent = this.options.initiallyExpanded ? '-' : '+';
+                    expanderOrPlaceholder.textContent = '◢';
                 } else {
                     expanderOrPlaceholder = document.createElement('span');
                     expanderOrPlaceholder.classList.add('treeview-expander-placeholder');
@@ -439,7 +431,6 @@
                         if (childUl) {
                             if (li.classList.contains('expanded')) {
                                 li.classList.remove('expanded');
-                                expanderOrPlaceholder.textContent = '+';
                                 childUl.style.height = `${childUl.scrollHeight}px`;
                                 requestAnimationFrame(() => {
                                     childUl.style.height = '0px';
@@ -450,7 +441,6 @@
                                 }, {once: true});
                             } else {
                                 li.classList.add('expanded');
-                                expanderOrPlaceholder.textContent = '-';
                                 childUl.style.height = '0px';
                                 requestAnimationFrame(() => {
                                     childUl.style.height = `${childUl.scrollHeight}px`;
@@ -661,20 +651,17 @@
 
                 expandableListItems.forEach(item => {
                     const nodeId = item.dataset.id;
-                    const expander = item.querySelector('.treeview-expander');
                     const childUl = item.querySelector('ul');
 
                     if (this._initialExpansionStates.has(nodeId)) {
                         const wasExpanded = this._initialExpansionStates.get(nodeId);
                         if (wasExpanded) {
                             item.classList.add('expanded');
-                            if (expander) expander.textContent = '-';
                             if (childUl) childUl.style.height = 'auto';
                         } else {
                             // Only trigger collapse animation if it's currently expanded and should be collapsed
                             if (item.classList.contains('expanded')) {
                                 item.classList.remove('expanded');
-                                if (expander) expander.textContent = '+';
                                 if (childUl) {
                                     childUl.style.height = `${childUl.scrollHeight}px`;
                                     requestAnimationFrame(() => {
@@ -694,11 +681,9 @@
                         // Fallback to initiallyExpanded if state wasn't captured (e.g., node added after search)
                         if (this.options.initiallyExpanded) {
                             item.classList.add('expanded');
-                            if (expander) expander.textContent = '-';
                             if (childUl) childUl.style.height = 'auto';
                         } else {
                             item.classList.remove('expanded');
-                            if (expander) expander.textContent = '+';
                             if (childUl) childUl.style.height = '';
                         }
                     }
@@ -726,7 +711,6 @@
                 if (childUl) {
                     childUl.style.height = '0px'; // Collapse children for search
                     item.classList.remove('expanded');
-                    if (expander) expander.textContent = '+';
                 }
             });
 
@@ -765,7 +749,6 @@
                 if (childUl) {
                     childUl.style.height = 'auto'; // Expand ancestors
                 }
-                if (expander) expander.textContent = '-';
             });
         }
 
@@ -782,8 +765,6 @@
             if (this.options.initiallyExpanded) {
                 this.treeviewContainer.querySelectorAll('li.has-children').forEach(li => {
                     li.classList.add('expanded');
-                    const expander = li.querySelector('.treeview-expander');
-                    if (expander) expander.textContent = '-';
                     const childUl = li.querySelector('ul');
                     if (childUl) {
                         childUl.style.height = 'auto';
@@ -792,8 +773,6 @@
             } else {
                 this.treeviewContainer.querySelectorAll('li.has-children').forEach(li => {
                     li.classList.remove('expanded');
-                    const expander = li.querySelector('.treeview-expander');
-                    if (expander) expander.textContent = '+';
                     const childUl = li.querySelector('ul');
                     if (childUl) {
                         childUl.style.height = '';

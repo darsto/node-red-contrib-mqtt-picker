@@ -42,29 +42,42 @@
         e.preventDefault();
 
         const data = [
-          { id: "A", children: [{ id: "A.1" }, { id: "A.2" }] },
           {
-            id: "B",
+            id: "Category_Alpha",
             children: [
-              { id: "B.1", children: [{ id: "B.1.1" }, { id: "B.1.2" }] },
-              { id: "B.2" },
+              { id: "Category_Alpha.Item_One" },
+              { id: "Category_Alpha.Item_Two" },
             ],
           },
-          { id: "C" },
+          {
+            id: "Category_Bravo",
+            children: [
+              {
+                id: "Category_Bravo.Subgroup_One",
+                children: [
+                  { id: "Category_Bravo.Subgroup_One.Entry_A" },
+                  { id: "Category_Bravo.Subgroup_One.Entry_B" },
+                ],
+              },
+              { id: "Category_Bravo.Subgroup_Two" },
+            ],
+          },
+          { id: "Category_Charlie" },
         ];
 
         for (let i = 0; i < 70; i++) {
-          data.push({ id: "C" });
+          data.push({ id: "Category_Charlie_with_long_name_etc" });
         }
 
         const dialog = document.createElement("div");
         const tree_div = document.createElement("div");
         tree_div.id = "sp-mqtt-picker";
         tree_div.style =
-          "max-height: 90vh; overflow: auto; border: 1px solid #ddd; padding: 8px; background:#fff;";
+          "border: none; padding: 0; box-shadow: none; max-width: none; margin: 0;";
         dialog.append(tree_div);
 
         let selected = null;
+        let $dialog = null;
         const tree = new Treeview({
           container: tree_div,
           data,
@@ -81,36 +94,48 @@
           },
           onRenderNode: (nodeData, nodeContentWrapperElement) => {
             nodeContentWrapperElement.innerHTML = "";
-            const span = document.createElement("span");
-            span.className = "treeview-node-text";
+            const nameEl = document.createElement("span");
+            nameEl.className = "name";
             const lastDotPos = nodeData.id.lastIndexOf(".");
             const name = nodeData.id.substring(lastDotPos + 1);
-            span.textContent = name;
-            nodeContentWrapperElement.appendChild(span);
+            nameEl.textContent = name;
+            nodeContentWrapperElement.appendChild(nameEl);
+            const typeEl = document.createElement("span");
+            typeEl.className = "type";
+            typeEl.textContent = "button";
+            nodeContentWrapperElement.appendChild(typeEl);
+            const valueEl = document.createElement("span");
+            valueEl.className = "value";
+            valueEl.textContent = "42";
+            nodeContentWrapperElement.appendChild(valueEl);
+
+            nameEl.ondblclick = typeEl.ondblclick = valueEl.ondblclick = () => {
+              document.querySelector("#node-input-topic").value = nodeData.id;
+              $dialog.dialog("close");
+            }
           },
         });
 
-        $(dialog).dialog({
+        $dialog = $(dialog).dialog({
           title: "Pick a string",
           modal: true,
-          width: "90vw",
-          minHeight: 0,
+          minWidth: 300,
+          width: Math.min(1020, Math.round(window.innerWidth * 0.9)),
+          minHeight: 400,
+          height: Math.round(window.innerHeight * 0.9),
           buttons: {
             Ok: () => {
               if (selected) {
                 document.querySelector("#node-input-topic").value = selected;
               }
-              d.dialog("close").remove();
+              $dialog.dialog("close");
             },
             Cancel: () => {
-              d.dialog("close").remove();
+              $dialog.dialog("close");
             },
           },
-          create: () => {
-            $(this).css("maxHeight", "90vh");
-          },
           close: () => {
-            this.remove();
+            dialog.remove();
           },
         });
       };

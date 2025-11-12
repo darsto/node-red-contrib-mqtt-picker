@@ -2,6 +2,7 @@
 
 /* Base container for the treeview instance */
 .custom-treeview-wrapper {
+    position: relative;
     background-color: #fff;
     border: 1px solid #ddd;
     padding: 15px;
@@ -52,19 +53,17 @@
 /* Tree structure styling */
 .custom-treeview-wrapper ul {
     list-style: none;
-    padding-left: 20px; /* Indent children */
+    padding: 0;
     margin: 0;
 }
 
 .custom-treeview-wrapper li > ul { /* Only nested ULs get collapse animation */
     height: 0;
     overflow: hidden;
-    transition: height 0.3s ease-out;
+    transition: height 0.1s ease-out;
 }
 
 .custom-treeview-wrapper li {
-    margin: 5px 0;
-    position: relative;
     font-size: 0.95em;
     color: #333;
     cursor: default; /* Default cursor for the LI, actual clickables get specific cursors */
@@ -78,9 +77,6 @@
     display: flex; /* Use flexbox for icon and text alignment */
     align-items: center; /* Vertically align icon and text */
     padding-left: 0;
-    cursor: pointer; /* Cursor for the clickable node content */
-    user-select: none; /* Prevent text selection on node content */
-    padding: 2px 0; /* Small vertical padding for clickable area */
 }
 
 /* Style for non-selectable nodes */
@@ -109,7 +105,7 @@
     user-select: none;
     flex-shrink: 0; /* Prevent icon from shrinking */
     margin-right: 5px; /* Space between icon and text */
-    transition: transform 0.2s ease-in-out; /* Smooth transition for icon */
+    transition: transform 0.1s ease-in-out; /* Smooth transition for icon */
 }
 
 /* Styling for the placeholder span for leaf nodes */
@@ -120,20 +116,80 @@
     margin-right: 5px;
 }
 
-/* .custom-treeview-wrapper .treeview-node-content:hover { /* Hover on the content wrapper */
-/*    background-color: #e0e0e0; */
-/* } */
+.custom-treeview-wrapper > ul {
+    border: 1px solid gray;
+    border-top: none;
+}
 
-.custom-treeview-wrapper li * {
-    transition: background-color 0.2s ease-in-out;
+.custom-treeview-wrapper .treeview-node-content {
+    --indent: 0;
+    position: relative;
+    padding-left: calc(12px * var(--indent));
+    font-size: 13px;
+    font-variant: all-petite-caps;
+}
+
+.custom-treeview-wrapper .treeview-node-content+ul .treeview-node-content {
+    --indent: 1;
+    &+ul .treeview-node-content {
+        --indent: 2;
+        &+ul .treeview-node-content {
+            --indent: 3;
+            &+ul .treeview-node-content {
+                --indent: 4;
+                &+ul .treeview-node-content {
+                    --indent: 5;
+                    &+ul .treeview-node-content {
+                        --indent: 6;
+                    }
+                }
+            }
+        }
+    }
+}
+
+.custom-treeview-wrapper .treeview-node-content > .name {
+    width: calc(400px - 12px * var(--indent));
+}
+
+.custom-treeview-wrapper .treeview-node-content > .type {
+    width: 150px;
+    border-left: 1px solid gray;
+    padding: 2px 4px;
+}
+
+.custom-treeview-wrapper .treeview-node-content > .value {
+    border-left: 1px solid gray;
+    padding: 2px 4px;
+}
+
+.custom-treeview-wrapper .treeview-node-content > span {
+    padding: 2px 0;
+}
+
+.custom-treeview-wrapper .treeview-node-content:after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 1px;
+    width: 100%;
+    background: gray;
+}
+
+.custom-treeview-wrapper .treeview-node-content:hover {
+   background-color: rgba(194, 209, 236, 0.22);
 }
 
 .custom-treeview-wrapper li.selected > .treeview-node-content { /* Apply selected style to the content wrapper */
-    background-color: rgba(100, 149, 237, 0.22);
+    background-color: rgba(128, 166, 236, 0.22);
     color: #0056b3;
-    border-radius: 3px;
 }
 
+.custom-treeview-wrapper li:not(.expanded) > .treeview-node-content > .treeview-expander {
+    transform: rotate(-45deg);
+    color: #acacac;
+}
 
 /* For search results */
 .custom-treeview-wrapper li.hidden {
@@ -170,7 +226,7 @@
     color: white;
     font-size: 0.9em;
     cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    transition: transform 0.1s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     flex-grow: 1; /* Allow buttons to grow to fill space */
     min-width: 110px; /* Minimum width for buttons */
