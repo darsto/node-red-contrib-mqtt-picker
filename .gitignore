@@ -1,6 +1,8 @@
 node_modules/
 data/node_modules/
 data/.config.*
+data/flows*
+data/.flows*
 data/settings.js
 data/package-lock.json
 /.vscode/
