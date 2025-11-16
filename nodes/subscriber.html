@@ -1,0 +1,18 @@
+<script type="text/javascript">
+    RED.nodes.registerType('mqtt-db-subscriber',{
+        category: 'config',
+        defaults: {
+            command: {value:"/usr/bin/true",required:true},
+        },
+        label: function() {
+            return this.command;
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="mqtt-db-subscriber">
+    <div class="form-row">
+        <label for="node-config-input-command"><i class="fa fa-bookmark"></i> Command</label>
+        <input type="text" id="node-config-input-command">
+    </div>
+</script>

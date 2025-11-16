@@ -1,4 +1,8 @@
-<script type="text/x-red" data-template-name="string-picker">
+<script type="text/x-red" data-template-name="mqtt-db-in">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-globe"></i> MQTT Subscriber</label>
+    <input type="text" id="node-input-subscriber" placeholder="MQTT Subscriber">
+  </div>
   <div class="form-row">
     <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
     <input type="text" id="node-input-name" placeholder="Name">
@@ -12,7 +16,7 @@
   </div>
 </script>
 
-<script type="text/x-red" data-help-name="string-picker">
+<script type="text/x-red" data-help-name="mqtt-db-in">
   <p>A node that stores a string. Click the "Pick" button to choose one of the hard-coded options.</p>
 </script>
 
@@ -24,18 +28,17 @@
 <script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
 
 <script type="text/javascript">
-  RED.nodes.registerType("string-picker", {
+  RED.nodes.registerType("mqtt-db-in", {
     category: "function",
     color: "#a6bbcf",
     defaults: {
-      name: { value: "" },
-      topic: { value: "" },
+      subscriber: { value: "", type: "mqtt-db-subscriber" },
     },
     inputs: 1,
     outputs: 1,
     icon: "font-awesome/fa-font",
     label: () => {
-      return this.name || this.picked || "string-picker";
+      return this.name || this.picked || "mqtt-db-in";
     },
     oneditprepare: () => {
       document.querySelector("#node-input-topic-pickbtn").onclick = (e) => {
