@@ -1,18 +1,144 @@
-<script type="text/javascript">
-    RED.nodes.registerType('mqtt-db-subscriber',{
-        category: 'config',
-        defaults: {
-            command: {value:"/usr/bin/true",required:true},
-        },
-        label: function() {
-            return this.command;
-        }
-    });
+<script type="text/x-red" data-template-name="mqtt-db-subscriber">
+  <div class="form-row">
+    Connect this node to "mqtt in" and "mqtt out" nodes.
+  </div>
 </script>
 
-<script type="text/html" data-template-name="mqtt-db-subscriber">
-    <div class="form-row">
-        <label for="node-config-input-command"><i class="fa fa-bookmark"></i> Command</label>
-        <input type="text" id="node-config-input-command">
-    </div>
+<script type="text/x-red" data-help-name="mqtt-db-subscriber">
+  <p>Connect this node to "mqtt in" and "mqtt out" nodes.</p>
+</script>
+
+
+<script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
+<link
+  rel="stylesheet"
+  href="resources/node-red-contrib-mqtt-picker/treeview.css"
+/>
+<script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
+
+<script type="text/javascript">
+  RED.nodes.registerType("mqtt-db-subscriber", {
+    category: "storage",
+    color: "burlywood",
+    defaults: {
+    },
+    inputs: 1,
+    outputs: 1,
+    icon: "font-awesome/fa-podcast",
+    label: function () {
+      return "mqttdb subscriber";
+    },
+    paletteLabel: function() {
+      return "mqttdb subscriber";
+    },
+  });
+
+  const set_topic = (topic) => {
+    document.querySelector("#node-input-topic").value = topic;
+    const name = document.querySelector("#node-input-name");
+  };
+  window.open_mqtt_topic_picker = (e) => {
+    e.preventDefault();
+    const data = [
+      {
+        id: "Category_Alpha",
+        children: [
+          { id: "Category_Alpha.Item_One" },
+          { id: "Category_Alpha.Item_Two" },
+        ],
+      },
+      {
+        id: "Category_Bravo",
+        children: [
+          {
+            id: "Category_Bravo.Subgroup_One",
+            children: [
+              { id: "Category_Bravo.Subgroup_One.Entry_A" },
+              { id: "Category_Bravo.Subgroup_One.Entry_B" },
+            ],
+          },
+          { id: "Category_Bravo.Subgroup_Two" },
+        ],
+      },
+      { id: "Category_Charlie" },
+    ];
+
+    for (let i = 0; i < 70; i++) {
+      data.push({ id: "Category_Charlie_with_long_name_etc" });
+    }
+
+    const dialog = document.createElement("div");
+    const tree_div = document.createElement("div");
+    tree_div.id = "sp-mqtt-picker";
+    tree_div.style =
+      "border: none; padding: 0; box-shadow: none; max-width: none; margin: 0;";
+    dialog.append(tree_div);
+
+    let selected = null;
+    let $dialog = null;
+    const tree = new Treeview({
+      container: tree_div,
+      data,
+      nodeNameKey: "id",
+      searchEnabled: true,
+      initiallyExpanded: false,
+      multiSelectEnabled: false,
+      onSelectionChange: (selectedArray) => {
+        if (selectedArray && selectedArray.length > 0) {
+          selected = selectedArray[0].id;
+        } else {
+          selected = null;
+        }
+      },
+      onRenderNode: (nodeData, nodeContentWrapperElement) => {
+        nodeContentWrapperElement.innerHTML = "";
+        const nameEl = document.createElement("span");
+        nameEl.className = "name";
+        const lastDotPos = nodeData.id.lastIndexOf(".");
+        const name = nodeData.id.substring(lastDotPos + 1);
+        nameEl.textContent = name;
+        nodeContentWrapperElement.appendChild(nameEl);
+        const typeEl = document.createElement("span");
+        typeEl.className = "type";
+        typeEl.textContent = "button";
+        nodeContentWrapperElement.appendChild(typeEl);
+        const valueEl = document.createElement("span");
+        valueEl.className = "value";
+        valueEl.textContent = "42";
+        nodeContentWrapperElement.appendChild(valueEl);
+
+        nameEl.ondblclick =
+          typeEl.ondblclick =
+          valueEl.ondblclick =
+            () => {
+              set_topic(nodeData.id);
+              $dialog.dialog("close");
+            };
+      },
+    });
+
+    $dialog = $(dialog).dialog({
+      title: "Pick a string",
+      modal: true,
+      minWidth: 300,
+      width: Math.min(1020, Math.round(window.innerWidth * 0.9)),
+      minHeight: 400,
+      height: Math.round(window.innerHeight * 0.9),
+      buttons: {
+        Ok: () => {
+          if (selected) {
+            set_topic(selected);
+          }
+          $dialog.dialog("close");
+        },
+        Cancel: () => {
+          $dialog.dialog("close");
+        },
+      },
+      close: () => {
+        dialog.remove();
+      },
+    });
+  };
+
 </script>

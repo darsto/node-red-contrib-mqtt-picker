@@ -1,10 +1,23 @@
+
 module.exports = function(RED) {
-    function MqttDbSubscriber(n) {
-        RED.nodes.createNode(this,n);
-        this.command = n.command;
+    function MqttDbSubscriber(config) {
+        RED.nodes.createNode(this, config);
+        this.db = null;
+
+        this.connect = (node) => {
+            if (!this.db) {
+                this.db = {};
+            }
+        }
+
+        this.subscribe = (topic, cb) => {
+
+        }
 
         this.on('close', function() {
-            console.log("mqtt-db-subscriber close");
+            if (this.db) {
+                this.db = null;
+            }
         });
     }
     RED.nodes.registerType("mqtt-db-subscriber", MqttDbSubscriber);

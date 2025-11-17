@@ -1,147 +1,67 @@
 <script type="text/x-red" data-template-name="mqtt-db-in">
   <div class="form-row">
-    <label for="node-input-name"><i class="fa fa-globe"></i> MQTT Subscriber</label>
-    <input type="text" id="node-input-subscriber" placeholder="MQTT Subscriber">
+    <label for="node-input-topic"><i class="fa fa-tasks"></i> Topic</label>
+    <div style="width: 70%; display: inline-flex;">
+        <input type="text" id="node-input-topic" style="flex-grow: 1" placeholder="Topic" autocomplete="off">
+        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-folder-open"></i></a></div>
+    </div>
   </div>
+
+  <div class="form-row">
+    <label for="node-input-payload"><i class="fa fa-envelope"></i> Payload</label>
+    <select id="node-input-payload" style="width: 70%;">
+      <option value="value">value</option>
+      <option value="object">object</option>
+    </select>
+  </div>
+
   <div class="form-row">
     <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
     <input type="text" id="node-input-name" placeholder="Name">
   </div>
+
   <div class="form-row">
-    <label for="node-input-topic"><i class="fa fa-font"></i> Value</label>
-    <div style="width: 70%; display: inline-flex;">
-        <input type="text" id="node-input-topic" style="flex-grow: 1" placeholder="Topic" autocomplete="off">
-        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-pencil"></i></a></div>
-    </div>
+    <label for="node-input-attr"><i class="fa fa-tag"></i> Attribute</label>
+    <input type="text" id="node-input-attr" placeholder="payload">
   </div>
+
+  <div class="form-row">
+    <label for="node-input-ack"><i class="fa fa-question"></i> Ack</label>
+    <select id="node-input-ack" style="width: 70%;">
+      <option value="all">Send all events</option>
+      <option value="updates">Only updates (ack==true)</option>
+      <option value="commands">Only commands (ack==false)</option>
+    </select>
+  </div>
+
+  <div class="form-tips"><b>Tip:</b> Leave topic blank if you want to set them via msg properties.</div>
 </script>
 
 <script type="text/x-red" data-help-name="mqtt-db-in">
-  <p>A node that stores a string. Click the "Pick" button to choose one of the hard-coded options.</p>
+  <p>mqtt-in node with a topic picker</p>
 </script>
 
-<script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
-<link
-  rel="stylesheet"
-  href="resources/node-red-contrib-mqtt-picker/treeview.css"
-/>
-<script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
-
 <script type="text/javascript">
-  RED.nodes.registerType("mqtt-db-in", {
-    category: "function",
-    color: "#a6bbcf",
-    defaults: {
-      subscriber: { value: "", type: "mqtt-db-subscriber" },
-    },
-    inputs: 1,
-    outputs: 1,
-    icon: "font-awesome/fa-font",
-    label: () => {
-      return this.name || this.picked || "mqtt-db-in";
-    },
-    oneditprepare: () => {
-      document.querySelector("#node-input-topic-pickbtn").onclick = (e) => {
-        e.preventDefault();
-
-        const data = [
-          {
-            id: "Category_Alpha",
-            children: [
-              { id: "Category_Alpha.Item_One" },
-              { id: "Category_Alpha.Item_Two" },
-            ],
-          },
-          {
-            id: "Category_Bravo",
-            children: [
-              {
-                id: "Category_Bravo.Subgroup_One",
-                children: [
-                  { id: "Category_Bravo.Subgroup_One.Entry_A" },
-                  { id: "Category_Bravo.Subgroup_One.Entry_B" },
-                ],
-              },
-              { id: "Category_Bravo.Subgroup_Two" },
-            ],
-          },
-          { id: "Category_Charlie" },
-        ];
-
-        for (let i = 0; i < 70; i++) {
-          data.push({ id: "Category_Charlie_with_long_name_etc" });
-        }
-
-        const dialog = document.createElement("div");
-        const tree_div = document.createElement("div");
-        tree_div.id = "sp-mqtt-picker";
-        tree_div.style =
-          "border: none; padding: 0; box-shadow: none; max-width: none; margin: 0;";
-        dialog.append(tree_div);
-
-        let selected = null;
-        let $dialog = null;
-        const tree = new Treeview({
-          container: tree_div,
-          data,
-          nodeNameKey: "id",
-          searchEnabled: true,
-          initiallyExpanded: false,
-          multiSelectEnabled: false,
-          onSelectionChange: (selectedArray) => {
-            if (selectedArray && selectedArray.length > 0) {
-              selected = selectedArray[0].id;
-            } else {
-              selected = null;
-            }
-          },
-          onRenderNode: (nodeData, nodeContentWrapperElement) => {
-            nodeContentWrapperElement.innerHTML = "";
-            const nameEl = document.createElement("span");
-            nameEl.className = "name";
-            const lastDotPos = nodeData.id.lastIndexOf(".");
-            const name = nodeData.id.substring(lastDotPos + 1);
-            nameEl.textContent = name;
-            nodeContentWrapperElement.appendChild(nameEl);
-            const typeEl = document.createElement("span");
-            typeEl.className = "type";
-            typeEl.textContent = "button";
-            nodeContentWrapperElement.appendChild(typeEl);
-            const valueEl = document.createElement("span");
-            valueEl.className = "value";
-            valueEl.textContent = "42";
-            nodeContentWrapperElement.appendChild(valueEl);
-
-            nameEl.ondblclick = typeEl.ondblclick = valueEl.ondblclick = () => {
-              document.querySelector("#node-input-topic").value = nodeData.id;
-              $dialog.dialog("close");
-            }
-          },
-        });
-
-        $dialog = $(dialog).dialog({
-          title: "Pick a string",
-          modal: true,
-          minWidth: 300,
-          width: Math.min(1020, Math.round(window.innerWidth * 0.9)),
-          minHeight: 400,
-          height: Math.round(window.innerHeight * 0.9),
-          buttons: {
-            Ok: () => {
-              if (selected) {
-                document.querySelector("#node-input-topic").value = selected;
-              }
-              $dialog.dialog("close");
-            },
-            Cancel: () => {
-              $dialog.dialog("close");
-            },
-          },
-          close: () => {
-            dialog.remove();
-          },
-        });
-      };
-    },
-  });
+    RED.nodes.registerType("mqtt-db-in", {
+      category: "common",
+      color: "#8fbaf7",
+      defaults: {
+        topic: { value: "", required: true },
+        payload: { value: "value" },
+        name: { value: "" },
+        attr: { value: "" },
+        ack: { value: "updates" },
+      },
+      outputs: 1,
+      icon: "font-awesome/fa-database",
+      label: function () {
+        return this.name || this.topic || "mqtt-db in";
+      },
+      paletteLabel: function() {
+        return "mqttdb in";
+      },
+      oneditprepare: function () {
+        document.querySelector("#node-input-topic-pickbtn").onclick = window.open_mqtt_topic_picker;
+      },
+    });
 </script>
