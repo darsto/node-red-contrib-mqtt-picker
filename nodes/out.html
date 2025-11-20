@@ -1,0 +1,52 @@
+<script type="text/x-red" data-template-name="mqtt-db-out">
+  <div class="form-row">
+    <label for="node-input-topic"><i class="fa fa-tasks"></i> Topic</label>
+    <div style="width: 70%; display: inline-flex;">
+        <input type="text" id="node-input-topic" style="flex-grow: 1" placeholder="Topic" autocomplete="off">
+        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-folder-open"></i></a></div>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+
+  <div class="form-row">
+    <label for="node-input-ack"><i class="fa fa-arrow-up"></i> Auto create</label>
+    <select id="node-input-ack" style="width: 70%;">
+      <option value="true">Create states if they don't exist</option>
+      <option value="false">Ignore messages for non existing states</option>
+    </select>
+  </div>
+
+  <div class="form-tips"><b>Tip:</b> Leave topic blank if you want to set them via msg properties.</div>
+</script>
+
+<script type="text/x-red" data-help-name="mqtt-db-out">
+  <p>mqtt-out node with a topic picker</p>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType("mqtt-db-out", {
+      category: "common",
+      color: "#8fbaf7",
+      defaults: {
+        topic: { value: "", required: true },
+        name: { value: "" },
+        create: { value: "false" },
+      },
+      inputs: 1,
+      align: "right",
+      icon: "font-awesome/fa-database",
+      label: function () {
+        return this.name || this.topic || "mqtt-db out";
+      },
+      paletteLabel: function() {
+        return "mqttdb out";
+      },
+      oneditprepare: function () {
+        document.querySelector("#node-input-topic-pickbtn").onclick = window.open_mqtt_topic_picker;
+      },
+    });
+</script>

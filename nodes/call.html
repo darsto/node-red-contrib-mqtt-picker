@@ -1,0 +1,68 @@
+<script type="text/x-red" data-template-name="mqtt-db-call">
+  <div class="form-row">
+    <label for="node-input-topic"><i class="fa fa-tasks"></i> Topic</label>
+    <div style="width: 70%; display: inline-flex;">
+        <input type="text" id="node-input-topic" style="flex-grow: 1" placeholder="Topic" autocomplete="off">
+        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-folder-open"></i></a></div>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <label for="node-input-payload"><i class="fa fa-envelope"></i> Payload</label>
+    <select id="node-input-payload" style="width: 70%;">
+      <option value="value">value</option>
+      <option value="object">object</option>
+    </select>
+  </div>
+
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+
+  <div class="form-row">
+    <label for="node-input-attr"><i class="fa fa-tag"></i> Attribute</label>
+    <input type="text" id="node-input-attr" placeholder="payload">
+  </div>
+
+  <div class="form-row">
+    <label for="node-input-noexist"><i class="fa fa-question"></i> Return error when Object does not exist</label>
+    <select id="node-input-noexist" style="width: 70%;">
+      <option value="error">Return Error</option>
+      <option value="undef">Return undefined</option>
+      <option value="nothing">Return nothing</option>
+    </select>
+  </div>
+
+  <div class="form-tips"><b>Tip:</b> Leave topic blank if you want to set them via msg properties.</div>
+</script>
+
+<script type="text/x-red" data-help-name="mqtt-db-call">
+  <p>Query most recent value for any mqtt topic</p>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType("mqtt-db-call", {
+      category: "common",
+      color: "#8fbaf7",
+      defaults: {
+        topic: { value: "", required: true },
+        payload: { value: "value" },
+        name: { value: "" },
+        attr: { value: "" },
+        noexist: { value: "nothing" },
+      },
+      inputs: 1,
+      outputs: 1,
+      icon: "font-awesome/fa-database",
+      label: function () {
+        return this.name || this.topic || "mqtt-db call";
+      },
+      paletteLabel: function() {
+        return "mqttdb call";
+      },
+      oneditprepare: function () {
+        document.querySelector("#node-input-topic-pickbtn").onclick = window.open_mqtt_topic_picker;
+      },
+    });
+</script>

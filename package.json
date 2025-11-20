@@ -6,7 +6,9 @@
   "node-red": {
     "nodes": {
       "mqtt-db-subscriber": "nodes/subscriber.js",
-      "mqtt-db-in": "nodes/in.js"
+      "mqtt-db-in": "nodes/in.js",
+      "mqtt-db-call": "nodes/call.js",
+      "mqtt-db-out": "nodes/out.js"
     }
   },
   "scripts": {
