@@ -21,11 +21,6 @@
   </div>
 
   <div class="form-row">
-    <label for="node-input-attr"><i class="fa fa-tag"></i> Attribute</label>
-    <input type="text" id="node-input-attr" placeholder="payload">
-  </div>
-
-  <div class="form-row">
     <label for="node-input-ack"><i class="fa fa-question"></i> Ack</label>
     <select id="node-input-ack" style="width: 70%;">
       <option value="all">Send all events</option>
@@ -33,8 +28,6 @@
       <option value="commands">Only commands (ack==false)</option>
     </select>
   </div>
-
-  <div class="form-tips"><b>Tip:</b> Leave topic blank if you want to set them via msg properties.</div>
 </script>
 
 <script type="text/x-red" data-help-name="mqtt-db-in">
@@ -42,26 +35,26 @@
 </script>
 
 <script type="text/javascript">
-    RED.nodes.registerType("mqtt-db-in", {
-      category: "common",
-      color: "#8fbaf7",
-      defaults: {
-        topic: { value: "", required: true },
-        payload: { value: "value" },
-        name: { value: "" },
-        attr: { value: "" },
-        ack: { value: "updates" },
-      },
-      outputs: 1,
-      icon: "font-awesome/fa-database",
-      label: function () {
-        return this.name || this.topic || "mqtt-db in";
-      },
-      paletteLabel: function() {
-        return "mqttdb in";
-      },
-      oneditprepare: function () {
-        document.querySelector("#node-input-topic-pickbtn").onclick = window.open_mqtt_topic_picker;
-      },
-    });
+  RED.nodes.registerType("mqtt-db-in", {
+    category: "common",
+    color: "#8fbaf7",
+    defaults: {
+      topic: { value: "", required: true },
+      payload: { value: "value" },
+      name: { value: "" },
+      ack: { value: "updates" },
+    },
+    outputs: 1,
+    icon: "font-awesome/fa-database",
+    label: function () {
+      return this.name || this.topic || "mqtt-db in";
+    },
+    paletteLabel: function () {
+      return "mqttdb in";
+    },
+    oneditprepare: function () {
+      document.querySelector("#node-input-topic-pickbtn").onclick =
+        window.open_mqtt_topic_picker;
+    },
+  });
 </script>

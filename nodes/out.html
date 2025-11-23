@@ -28,25 +28,26 @@
 </script>
 
 <script type="text/javascript">
-    RED.nodes.registerType("mqtt-db-out", {
-      category: "common",
-      color: "#8fbaf7",
-      defaults: {
-        topic: { value: "", required: true },
-        name: { value: "" },
-        create: { value: "false" },
-      },
-      inputs: 1,
-      align: "right",
-      icon: "font-awesome/fa-database",
-      label: function () {
-        return this.name || this.topic || "mqtt-db out";
-      },
-      paletteLabel: function() {
-        return "mqttdb out";
-      },
-      oneditprepare: function () {
-        document.querySelector("#node-input-topic-pickbtn").onclick = window.open_mqtt_topic_picker;
-      },
-    });
+  RED.nodes.registerType("mqtt-db-out", {
+    category: "common",
+    color: "#8fbaf7",
+    defaults: {
+      topic: { value: "" },
+      name: { value: "" },
+      create: { value: "false" },
+    },
+    inputs: 1,
+    align: "right",
+    icon: "font-awesome/fa-database",
+    label: function () {
+      return this.name || this.topic || "mqtt-db out";
+    },
+    paletteLabel: function () {
+      return "mqttdb out";
+    },
+    oneditprepare: function () {
+      document.querySelector("#node-input-topic-pickbtn").onclick =
+        window.open_mqtt_topic_picker;
+    },
+  });
 </script>

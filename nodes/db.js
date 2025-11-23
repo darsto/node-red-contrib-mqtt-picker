@@ -1,25 +1,44 @@
 
-const fs = require('fs').promises;
+const fs = require('fs');
 
 class MqttDb {
   static RED = null;
+  static inst = null;
 
   constructor() {
     this.data = {};
     this.subs = { children: {}, cb: [] };
+    this.sub_all = null;
   }
 
-  async dump(filePath) {
+  static instance(RED) {
+    if (!MqttDb.inst) {
+      MqttDb.inst = new MqttDb();
+      const path = RED.settings.userDir + "/mqttdb.json";
+      MqttDb.inst.path = path;
+      if (fs.existsSync(path)) {
+        MqttDb.inst.load(path);
+      }
+      setInterval(() => {
+        MqttDb.inst.dump(path);
+      }, 1000 * 120);
+    }
+    return MqttDb.inst;
+  }
+
+  dump(filePath) {
     const json = JSON.stringify(this.data, null, 2);
-    await fs.writeFile(filePath, json, 'utf8');
+    fs.writeFileSync(filePath ?? this.path, json, 'utf8');
   }
 
-  async load(filePath) {
-    const content = await fs.readFile(filePath, 'utf8');
-    this.data = JSON.parse(content);
+  load(filePath) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const db = new MqttDb();
+    db.data = JSON.parse(content);
+    return db;
   }
 
-  update(key, value, do_create_tree = false) {
+  update(key, value, do_create_tree = true, acked = true) {
     let data = this.data;
     let subs = this.subs;
     const parts = key.split(/[\/.]/);
@@ -31,21 +50,38 @@ class MqttDb {
       const part = parts[i];
       const d = data[part];
       if (typeof d !== 'object' || !d || Array.isArray(d)) {
+        if (!do_create_tree) {
+          return;
+        }
         data[part] = {};
         // don't bother calling the subs here
       }
       data = data[part];
-      if (subs && subs.children) {
-        subs = subs.children[part];
-      }
+      subs = subs?.children?.[part];
     }
     const lastpart = parts[i];
     if (data[lastpart] !== undefined || do_create_tree) {
-      data[lastpart] = value;
-      if (subs && subs.cb) {
-        for (const cb in subs.cb) {
-          cb(value);
+      subs = subs?.children?.[lastpart];
+      let parsed_val = null;
+      try {
+        if (value[0] == "{") {
+          parsed_val = JSON.parse(value);
         }
+      } catch (e) {};
+      if (parsed_val) {
+        if (data[lastpart] === undefined) {
+          data[lastpart] = {};
+        }
+        Object.assign(data[lastpart], parsed_val);
+        for (const prop in parsed_val) {
+          const prop_subs = subs?.children[prop];
+          call_subs(this.sub_all, prop_subs, key + "." + prop, data[lastpart][prop], acked);
+        }
+      } else {
+        const number = Number(value);
+        const num_or_val = isNaN(number) ? value : number;
+        data[lastpart] = num_or_val;
+        call_subs(this.sub_all, subs, key, num_or_val, acked);
       }
     }
   }
@@ -57,15 +93,14 @@ class MqttDb {
       return 0;
     }
     let i = 0;
-    for (; i < parts.length - 1; i++) {
+    for (; i < parts.length; i++) {
       const part = parts[i];
-      if (!subs[part]) {
-        subs[part] = { children: {}, cb: [] };
+      if (!subs.children[part]) {
+        subs.children[part] = { children: {}, cb: [] };
       }
-      const s = subs[part];
-      subs = s.children;
+      subs = subs.children[part];
     }
-    subs.cbs.push(cb);
+    subs.cb.push(cb);
   }
 
   unsubscribe(key, cb) {
@@ -75,18 +110,17 @@ class MqttDb {
       return 0;
     }
     let i = 0;
-    for (; i < parts.length - 1; i++) {
+    for (; i < parts.length; i++) {
       const part = parts[i];
-      const s = subs[part];
-      if (!s) {
+      subs = subs.children[part];
+      if (!subs) {
         return;
       }
-      subs = s.children;
     }
 
-    const cb_idx = sub.indexOf(cb);
+    const cb_idx = subs.cb.indexOf(cb);
     if (cb_idx > -1) {
-      subs.splice(cb_idx, 1);
+      subs.cb.splice(cb_idx, 1);
     }
   }
 
@@ -107,3 +141,16 @@ class MqttDb {
     return data[lastpart];
   }
 }
+
+const call_subs = (sub_all, subs, key, value, acked) => {
+  if (subs && subs.cb) {
+    for (const cb of subs.cb) {
+      cb(key, value, acked);
+    }
+  }
+  if (sub_all) {
+    sub_all(key, value, acked);
+  }
+}
+
+module.exports = MqttDb;

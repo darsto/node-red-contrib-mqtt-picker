@@ -42,27 +42,28 @@
 </script>
 
 <script type="text/javascript">
-    RED.nodes.registerType("mqtt-db-call", {
-      category: "common",
-      color: "#8fbaf7",
-      defaults: {
-        topic: { value: "", required: true },
-        payload: { value: "value" },
-        name: { value: "" },
-        attr: { value: "" },
-        noexist: { value: "nothing" },
-      },
-      inputs: 1,
-      outputs: 1,
-      icon: "font-awesome/fa-database",
-      label: function () {
-        return this.name || this.topic || "mqtt-db call";
-      },
-      paletteLabel: function() {
-        return "mqttdb call";
-      },
-      oneditprepare: function () {
-        document.querySelector("#node-input-topic-pickbtn").onclick = window.open_mqtt_topic_picker;
-      },
-    });
+  RED.nodes.registerType("mqtt-db-call", {
+    category: "common",
+    color: "#8fbaf7",
+    defaults: {
+      topic: { value: "" },
+      payload: { value: "value" },
+      name: { value: "" },
+      attr: { value: "" },
+      noexist: { value: "nothing" },
+    },
+    inputs: 1,
+    outputs: 1,
+    icon: "font-awesome/fa-database",
+    label: function () {
+      return this.name || this.topic || "mqtt-db call";
+    },
+    paletteLabel: function () {
+      return "mqttdb call";
+    },
+    oneditprepare: function () {
+      document.querySelector("#node-input-topic-pickbtn").onclick =
+        window.open_mqtt_topic_picker;
+    },
+  });
 </script>
