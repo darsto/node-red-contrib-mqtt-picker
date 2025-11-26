@@ -22,6 +22,9 @@ class MqttDb {
       setInterval(() => {
         MqttDb.inst.dump(path);
       }, 1000 * 120);
+      RED.httpAdmin.get("/mqtt-db/data", (req, res) => {
+        res.json(MqttDb.inst?.data || {});
+      });
     }
     return MqttDb.inst;
   }

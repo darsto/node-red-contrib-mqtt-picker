@@ -98,6 +98,7 @@
 .treeview-expander {
     display: inline-block;
     width: 20px; /* Space for the icon */
+    margin-bottom: -1px;
     text-align: center;
     color: #666;
     font-weight: bold;
@@ -125,8 +126,9 @@
     --indent: 0;
     position: relative;
     padding-left: calc(12px * var(--indent));
+    align-items: stretch;
     font-size: 13px;
-    font-variant: all-petite-caps;
+    font-family: system-ui;
 }
 
 .custom-treeview-wrapper .treeview-node-content+ul .treeview-node-content {
@@ -149,11 +151,11 @@
 }
 
 .custom-treeview-wrapper .treeview-node-content > .name {
-    width: calc(400px - 12px * var(--indent));
+    flex: 0 0 calc(300px - 12px * var(--indent));
 }
 
 .custom-treeview-wrapper .treeview-node-content > .type {
-    width: 150px;
+    flex: 0 0 150px;
     border-left: 1px solid gray;
     padding: 2px 4px;
 }
@@ -161,6 +163,8 @@
 .custom-treeview-wrapper .treeview-node-content > .value {
     border-left: 1px solid gray;
     padding: 2px 4px;
+    text-wrap: wrap;
+    overflow-wrap: anywhere;
 }
 
 .custom-treeview-wrapper .treeview-node-content > span {
