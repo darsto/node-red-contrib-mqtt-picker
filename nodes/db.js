@@ -17,10 +17,10 @@ class MqttDb {
       const path = RED.settings.userDir + "/mqttdb.json";
       MqttDb.inst.path = path;
       if (fs.existsSync(path)) {
-        MqttDb.inst.load(path);
+        MqttDb.inst.load();
       }
       setInterval(() => {
-        MqttDb.inst.dump(path);
+        MqttDb.inst.dump();
       }, 1000 * 120);
       RED.httpAdmin.get("/mqtt-db/data", (req, res) => {
         res.json(MqttDb.inst?.data || {});
@@ -31,14 +31,12 @@ class MqttDb {
 
   dump(filePath) {
     const json = JSON.stringify(this.data, null, 2);
-    fs.writeFileSync(filePath ?? this.path, json, 'utf8');
+    fs.writeFileSync(filePath || this.path, json, 'utf8');
   }
 
   load(filePath) {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const db = new MqttDb();
-    db.data = JSON.parse(content);
-    return db;
+    const content = fs.readFileSync(filePath || this.path, 'utf8');
+    this.data = JSON.parse(content);
   }
 
   update(key, value, do_create_tree = true, acked = true) {

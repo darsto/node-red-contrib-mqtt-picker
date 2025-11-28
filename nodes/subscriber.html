@@ -36,6 +36,9 @@
   const set_topic = (topic) => {
     document.querySelector("#node-input-topic").value = topic;
     const name = document.querySelector("#node-input-name");
+    if (!name.value) {
+      name.value = topic;
+    }
   };
   let last_fetch_time = 0;
   let data = null;
@@ -51,7 +54,8 @@
       } catch (e) {
         db_data = {}
       }
-      data = explode_root(db_data);
+
+      data = build_mqtt_tree(db_data);
       last_fetch_time = now;
     }
 
@@ -74,6 +78,7 @@
       onSelectionChange: (selectedArray) => {
         if (selectedArray && selectedArray.length > 0) {
           selected = selectedArray[0].id;
+          localStorage.setItem("mqttdb-last-selected", selected);
         } else {
           selected = null;
         }
@@ -83,7 +88,10 @@
         const nameEl = document.createElement("span");
         nameEl.className = "name";
         const lastDotPos = nodeData.id.lastIndexOf(".");
-        const name = nodeData.id.substring(lastDotPos + 1);
+        let name = nodeData.id.substring(lastDotPos + 1);
+        if (nodeData.writable) {
+          name += " 📝";
+        }
         nameEl.textContent = name;
         nodeContentWrapperElement.appendChild(nameEl);
         const typeEl = document.createElement("span");
@@ -105,8 +113,21 @@
       },
     });
 
+    const selected_id = localStorage.getItem("mqttdb-last-selected");
+    if (selected_id) {
+      tree.selectNodeById(selected_id, true);
+      let node = tree.treeviewContainer.querySelector(`[data-id="${selected_id}"]`)?.parentElement;
+      while (node && node?.id != "sp-mqtt-picker") {
+        const expander = node.firstElementChild?.firstElementChild;
+        if (expander?.className == "treeview-expander") {
+          expander.click();
+        }
+        node = node.parentElement;
+      }
+    }
+
     $dialog = $(dialog).dialog({
-      title: "Pick a string",
+      title: "MQTT topic picker",
       modal: true,
       minWidth: 300,
       width: Math.min(1020, Math.round(window.innerWidth * 0.9)),
@@ -129,12 +150,34 @@
     });
   };
 
-  // transform any js object into an array of object fields
-  const explode_root = (obj) => {
-    return Object.entries(obj).map(([key, value]) => ({
+  const build_mqtt_tree = (obj) => {
+    const cmnd = obj.cmnd;
+    delete obj.cmnd;
+
+    const tree = Object.entries(obj).map(([key, value]) => ({
       id: key,
       children: explode_obj(value, key),
     }));
+
+    const stat_idx = tree.findIndex(p => p.id == "stat");
+    const stat = tree[stat_idx];
+
+    const set_writable = (dst, template) => {
+      if (!template) {
+        return;
+      }
+      for (const f in template) {
+        let idx = dst.findIndex(o => o.id.endsWith("." + f));
+        if (idx < 0) {
+          idx = dst.push({ id: f, children: [] }) - 1;
+        }
+        dst[idx].writable = true;
+        set_writable(dst[idx].children, template[f]);
+      }
+    };
+    set_writable(stat.children, cmnd);
+
+    return tree;
   }
 
   const explode_obj = (obj, prefix = "") => {
