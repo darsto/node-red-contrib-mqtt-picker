@@ -8,14 +8,6 @@
   </div>
 
   <div class="form-row">
-    <label for="node-input-payload"><i class="fa fa-envelope"></i> Payload</label>
-    <select id="node-input-payload" style="width: 70%;">
-      <option value="value">value</option>
-      <option value="object">object</option>
-    </select>
-  </div>
-
-  <div class="form-row">
     <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
     <input type="text" id="node-input-name" placeholder="Name">
   </div>
@@ -40,7 +32,6 @@
     color: "#8fbaf7",
     defaults: {
       topic: { value: "", required: true },
-      payload: { value: "value" },
       name: { value: "" },
       ack: { value: "updates" },
     },

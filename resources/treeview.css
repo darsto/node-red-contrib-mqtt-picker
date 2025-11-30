@@ -152,6 +152,24 @@
 
 .custom-treeview-wrapper .treeview-node-content > .name {
     flex: 0 0 calc(300px - 12px * var(--indent));
+
+    & > * {
+        user-select: none;
+    }
+
+    & > .remove {
+        float: right;
+        margin-right: 5px;
+        padding: 0 1px;
+        border-radius: 4px;
+        opacity: 0.5;
+
+        &:hover {
+            cursor: pointer;
+            opacity: 1.0;
+            box-shadow: 0px 1px 16px 1px gray;
+        }
+    }
 }
 
 .custom-treeview-wrapper .treeview-node-content > .type {

@@ -34,9 +34,10 @@
   });
 
   const set_topic = (topic) => {
+    const prev_topic = document.querySelector("#node-input-topic").value;
     document.querySelector("#node-input-topic").value = topic;
     const name = document.querySelector("#node-input-name");
-    if (!name.value) {
+    if (!name.value || name.value == prev_topic) {
       name.value = topic;
     }
   };
@@ -88,11 +89,42 @@
         const nameEl = document.createElement("span");
         nameEl.className = "name";
         const lastDotPos = nodeData.id.lastIndexOf(".");
-        let name = nodeData.id.substring(lastDotPos + 1);
-        if (nodeData.writable) {
-          name += " 📝";
-        }
+        const name = nodeData.id.substring(lastDotPos + 1);
         nameEl.textContent = name;
+        let nameExtraHTML = "";
+        if (nodeData.writable) {
+          nameEl.innerHTML += "<span title='Writable'> 📝</span>";
+        }
+        const removeBtn = document.createElement("span");
+        removeBtn.className = "remove";
+        removeBtn.title = "Remove node";
+        removeBtn.textContent = " 🗑️";
+        removeBtn.onclick = async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (confirm(`Are you sure you want to remove node ${name}`)) {
+            console.log("remove");
+            const res = await fetch("mqtt-db/data", {
+              method: "POST",
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                action: "remove",
+                id: nodeData.id,
+              })
+            });
+            const db_data = await res.json();
+            data = build_mqtt_tree(db_data);
+            last_fetch_time = now;
+            $dialog.dialog("close");
+            window.open_mqtt_topic_picker(e);
+          }
+        };
+        removeBtn.ondblclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        };
+        nameEl.appendChild(removeBtn);
+
         nodeContentWrapperElement.appendChild(nameEl);
         const typeEl = document.createElement("span");
         typeEl.className = "type";
@@ -160,25 +192,49 @@
     }));
 
     const stat_idx = tree.findIndex(p => p.id == "stat");
-    const stat = tree[stat_idx];
+    const stat = stat_idx >= 0 ? tree[stat_idx] : null;
 
-    const set_writable = (dst, template) => {
-      if (!template) {
-        return;
-      }
-      for (const f in template) {
-        let idx = dst.findIndex(o => o.id.endsWith("." + f));
-        if (idx < 0) {
-          idx = dst.push({ id: f, children: [] }) - 1;
+    // merge cmnd nodes with stat -> mark matching stat
+    // nodes as writable
+    if (stat) {
+      const set_writable = (dst, template) => {
+        if (!template) {
+          return;
         }
-        dst[idx].writable = true;
-        set_writable(dst[idx].children, template[f]);
+        for (const f in template) {
+          let idx = dst.findIndex(o => o.id.endsWith("." + f));
+          if (idx < 0) {
+            idx = dst.push({ id: f, children: [] }) - 1;
+          }
+          dst[idx].writable = true;
+          set_writable(dst[idx].children, template[f]);
+        }
+      };
+      set_writable(stat.children, cmnd);
+    }
+
+    // merge tele nodes with stat
+    const tele_idx = tree.findIndex(p => p.id == "tele");
+    const tele = tele_idx >= 0 ? tree.splice(tele_idx, 1)[0] : null;
+    for (const tele_dev of (tele?.children || [])) {
+      const stat_dev = get_child(stat, tele_dev.id);
+      if (!stat_dev) {
+        continue;
       }
-    };
-    set_writable(stat.children, cmnd);
+      stat_dev.children.push(...tele_dev.children);
+    }
 
     return tree;
   }
+
+  const get_child = (obj, id) => {
+    const dot_id = id.substring(id.lastIndexOf('.'));
+    if (!obj?.children) {
+      return null;
+    }
+    const idx = obj.children.findIndex(c => c.id.endsWith(dot_id));
+    return idx >= 0 ? obj.children[idx] : null;
+  };
 
   const explode_obj = (obj, prefix = "") => {
     return Object.entries(obj).map(([key, value]) => {

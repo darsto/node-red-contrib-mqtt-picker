@@ -4,7 +4,6 @@ module.exports = function (RED) {
   function StringPickerNode(config) {
     RED.nodes.createNode(this, config);
     this.topic = config.topic;
-    this.payload = config.payload;
     this.name = config.name;
     this.ack = config.ack;
 
@@ -13,7 +12,12 @@ module.exports = function (RED) {
       this.db = MqttDb.instance(RED);
       this.cb = this.db.subscribe(this.topic, (topic, val, ack) => {
         if (node.ack == "all" || (node.ack === "updates") == ack) {
-          node.send({ topic, payload: val, ack });
+          if (val === "ON") {
+            val = 1;
+          } else if (val === "OFF") {
+            val = 0;
+          }
+          node.send({ topic, payload: val, ack, ts: Date.now() });
         }
       });
     }

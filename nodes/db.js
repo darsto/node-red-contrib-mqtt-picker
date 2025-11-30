@@ -25,6 +25,12 @@ class MqttDb {
       RED.httpAdmin.get("/mqtt-db/data", (req, res) => {
         res.json(MqttDb.inst?.data || {});
       });
+      RED.httpAdmin.post("/mqtt-db/data", (req, res) => {
+        if (MqttDb.inst && req.body?.action == "remove" && req.body?.id) {
+          MqttDb.inst.remove(req.body.id);
+        }
+        res.json(MqttDb.inst?.data || {});
+      });
     }
     return MqttDb.inst;
   }
@@ -42,7 +48,8 @@ class MqttDb {
   update(key, value, do_create_tree = true, acked = true) {
     let data = this.data;
     let subs = this.subs;
-    const parts = key.split(/[\/.]/);
+    key = key.replaceAll('/', '.');
+    const parts = key.split('.');
     if (parts.length == 0) {
       return 0;
     }
@@ -63,27 +70,39 @@ class MqttDb {
     const lastpart = parts[i];
     if (data[lastpart] !== undefined || do_create_tree) {
       subs = subs?.children?.[lastpart];
-      let parsed_val = null;
-      try {
-        if (value[0] == "{") {
-          parsed_val = JSON.parse(value);
-        }
-      } catch (e) {};
-      if (parsed_val) {
+      if (typeof value === "object") {
         if (data[lastpart] === undefined) {
           data[lastpart] = {};
         }
-        Object.assign(data[lastpart], parsed_val);
-        for (const prop in parsed_val) {
-          const prop_subs = subs?.children[prop];
-          call_subs(this.sub_all, prop_subs, key + "." + prop, data[lastpart][prop], acked);
-        }
+        Object.assign(data[lastpart], value);
+        call_subs_recur(this.sub_all, key, subs, value, acked);
       } else {
         const number = Number(value);
         const num_or_val = isNaN(number) ? value : number;
         data[lastpart] = num_or_val;
         call_subs(this.sub_all, subs, key, num_or_val, acked);
       }
+    }
+  }
+
+  remove(key) {
+    let data = this.data;
+    const parts = key.split(/[\/.]/);
+    if (parts.length == 0) {
+      return 0;
+    }
+    let i = 0;
+    for (; i < parts.length - 1; i++) {
+      const part = parts[i];
+      const d = data[part];
+      if (typeof d !== 'object' || !d || Array.isArray(d)) {
+        return;
+      }
+      data = data[part];
+    }
+    const lastpart = parts[i];
+    if (data[lastpart] !== undefined) {
+      delete data[lastpart];
     }
   }
 
@@ -140,6 +159,18 @@ class MqttDb {
     }
     const lastpart = parts[i];
     return data[lastpart];
+  }
+}
+
+const call_subs_recur = (sub_all, key, subs, update_obj, acked) => {
+  for (const prop in update_obj) {
+    const prop_subs = subs?.children[prop];
+    const next_key = key + "." + prop;
+    const next_obj = update_obj[prop];
+    call_subs(sub_all, prop_subs, next_key, next_obj, acked);
+    if (next_obj && typeof next_obj === 'object' && !Array.isArray(next_obj)) {
+      call_subs_recur(sub_all, next_key, prop_subs, next_obj, acked);
+    }
   }
 }
 
