@@ -9,8 +9,8 @@ module.exports = function (RED) {
     const topics_to_ignore = new Set();
     this.db.sub_all = (topic, val, acked) => {
       if (!acked) {
-        if (topic.startsWith("stat.")) {
-          topic = topic.replace("stat.", "cmnd.");
+        if (topic.startsWith("stat.") || topic.startsWith("tele.")) {
+          topic = "cmnd." + topic.substring(5);
         }
         node.send({ topic: topic.replaceAll('.', '/'), payload: val });
         topics_to_ignore.add(topic);

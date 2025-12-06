@@ -49,7 +49,7 @@ class MqttDb {
     let data = this.data;
     let subs = this.subs;
     key = key.replaceAll('/', '.');
-    const parts = key.split('.');
+    const parts = split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -87,7 +87,7 @@ class MqttDb {
 
   remove(key) {
     let data = this.data;
-    const parts = key.split(/[\/.]/);
+    const parts = split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -108,7 +108,7 @@ class MqttDb {
 
   subscribe(key, cb) {
     let subs = this.subs;
-    const parts = key.split(/[\/.]/);
+    const parts = split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -125,7 +125,7 @@ class MqttDb {
 
   unsubscribe(key, cb) {
     let subs = this.subs;
-    const parts = key.split(/[\/.]/);
+    const parts = split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -146,7 +146,7 @@ class MqttDb {
 
   get(key) {
     let data = this.data;
-    const parts = key.split(/[\/.]/);
+    const parts = split_key(key);
     if (parts.length == 0) {
       return undefined;
     }
@@ -161,6 +161,20 @@ class MqttDb {
     return data[lastpart];
   }
 }
+
+const split_key = (key) => {
+  const parts = key.split(/[\/.]/);
+  if (parts.length >= 3) {
+    const tele_topics = ["LWT", "INFO1", "INFO2", "INFO3", "STATE", "SENSOR"];
+    if (parts[0] == "tele" && !tele_topics.includes(parts[2])) {
+      // best guess
+      parts[0] = "stat";
+    } else if (parts[0] == "stat" && tele_topics.includes(parts[2])) {
+      parts[0] = "tele";
+    }
+  }
+  return parts;
+};
 
 const call_subs_recur = (sub_all, key, subs, update_obj, acked) => {
   for (const prop in update_obj) {

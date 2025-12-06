@@ -195,12 +195,11 @@
       children: explode_obj(value, key),
     }));
 
-    const stat_idx = tree.findIndex(p => p.id == "stat");
-    const stat = tree[stat_idx];
-
     // merge tele nodes with stat
     const tele_idx = tree.findIndex(p => p.id == "tele");
     const tele = tele_idx >= 0 ? tree.splice(tele_idx, 1)[0] : null;
+    const stat_idx = tree.findIndex(p => p.id == "stat");
+    const stat = tree[stat_idx];
     for (const tele_dev of (tele?.children || [])) {
       let stat_dev = get_child(stat, tele_dev.id);
       if (!stat_dev) {
@@ -226,6 +225,10 @@
       }
     };
     set_writable(stat.children, cmnd);
+
+    // and finally unroll everything in stat
+    tree.push(...stat.children);
+    tree.splice(stat_idx, 1);
 
     return tree;
   }
