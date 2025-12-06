@@ -186,43 +186,46 @@
     const cmnd = obj.cmnd;
     delete obj.cmnd;
 
+    if (!obj.stat) {
+      obj.stat = {};
+    }
+
     const tree = Object.entries(obj).map(([key, value]) => ({
       id: key,
       children: explode_obj(value, key),
     }));
 
     const stat_idx = tree.findIndex(p => p.id == "stat");
-    const stat = stat_idx >= 0 ? tree[stat_idx] : null;
-
-    // merge cmnd nodes with stat -> mark matching stat
-    // nodes as writable
-    if (stat) {
-      const set_writable = (dst, template) => {
-        if (!template) {
-          return;
-        }
-        for (const f in template) {
-          let idx = dst.findIndex(o => o.id.endsWith("." + f));
-          if (idx < 0) {
-            idx = dst.push({ id: f, children: [] }) - 1;
-          }
-          dst[idx].writable = true;
-          set_writable(dst[idx].children, template[f]);
-        }
-      };
-      set_writable(stat.children, cmnd);
-    }
+    const stat = tree[stat_idx];
 
     // merge tele nodes with stat
     const tele_idx = tree.findIndex(p => p.id == "tele");
     const tele = tele_idx >= 0 ? tree.splice(tele_idx, 1)[0] : null;
     for (const tele_dev of (tele?.children || [])) {
-      const stat_dev = get_child(stat, tele_dev.id);
+      let stat_dev = get_child(stat, tele_dev.id);
       if (!stat_dev) {
-        continue;
+        stat_dev = { id: tele_dev.id.replace("tele.", "stat."), children: [] };
+        stat.children.push(stat_dev);
       }
       stat_dev.children.push(...tele_dev.children);
     }
+
+    // merge cmnd nodes with stat -> mark matching stat
+    // nodes as writable
+    const set_writable = (dst, template) => {
+      if (!template) {
+        return;
+      }
+      for (const f in template) {
+        let idx = dst.findIndex(o => o.id.endsWith("." + f));
+        if (idx < 0) {
+          idx = dst.push({ id: f, children: [] }) - 1;
+        }
+        dst[idx].writable = true;
+        set_writable(dst[idx].children, template[f]);
+      }
+    };
+    set_writable(stat.children, cmnd);
 
     return tree;
   }
