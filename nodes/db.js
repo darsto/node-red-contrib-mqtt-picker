@@ -8,11 +8,11 @@ class MqttDb {
   constructor() {
     this.data = {};
     this.subs = { children: {}, cb: [] };
-    this.sub_all = null;
   }
 
   static instance(RED) {
     if (!MqttDb.inst) {
+      MqttDb.RED = RED;
       MqttDb.inst = new MqttDb();
       const path = RED.settings.userDir + "/mqttdb.json";
       MqttDb.inst.path = path;
@@ -48,8 +48,9 @@ class MqttDb {
   update(key, value, do_create_tree = true, acked = true) {
     let data = this.data;
     let subs = this.subs;
+    const gathered_subs = [...subs.cb];
     key = key.replaceAll('/', '.');
-    const parts = split_key(key);
+    const parts = this.split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -66,28 +67,38 @@ class MqttDb {
       }
       data = data[part];
       subs = subs?.children?.[part];
+      if (subs) {
+        gathered_subs.push(...subs.cb);
+      }
     }
     const lastpart = parts[i];
     if (data[lastpart] !== undefined || do_create_tree) {
       subs = subs?.children?.[lastpart];
+      if (subs) {
+        gathered_subs.push(...subs.cb);
+      }
       if (typeof value === "object") {
         if (data[lastpart] === undefined) {
           data[lastpart] = {};
         }
         Object.assign(data[lastpart], value);
-        call_subs_recur(this.sub_all, key, subs, value, acked);
+        call_subs_recur(gathered_subs, key, subs, data[lastpart], acked);
       } else {
         const number = Number(value);
         const num_or_val = isNaN(number) ? value : number;
         data[lastpart] = num_or_val;
-        call_subs(this.sub_all, subs, key, num_or_val, acked);
+        call_subs(gathered_subs, key, num_or_val, acked);
       }
     }
   }
 
+  query(key) {
+    call_subs(this.subs.cb, key, "", false);
+  }
+
   remove(key) {
     let data = this.data;
-    const parts = split_key(key);
+    const parts = this.split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -108,7 +119,7 @@ class MqttDb {
 
   subscribe(key, cb) {
     let subs = this.subs;
-    const parts = split_key(key);
+    const parts = this.split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -121,11 +132,12 @@ class MqttDb {
       subs = subs.children[part];
     }
     subs.cb.push(cb);
+    return cb;
   }
 
   unsubscribe(key, cb) {
     let subs = this.subs;
-    const parts = split_key(key);
+    const parts = this.split_key(key);
     if (parts.length == 0) {
       return 0;
     }
@@ -146,7 +158,7 @@ class MqttDb {
 
   get(key) {
     let data = this.data;
-    const parts = split_key(key);
+    const parts = this.split_key(key);
     if (parts.length == 0) {
       return undefined;
     }
@@ -160,42 +172,52 @@ class MqttDb {
     const lastpart = parts[i];
     return data[lastpart];
   }
+
+  split_key(key) {
+    const parts = key.split(/[\/.]/);
+    if (parts.length >= 3) {
+      const tele_topics = ["LWT", "INFO1", "INFO2", "INFO3", "STATE", "SENSOR"];
+      if (parts[0] == "tele" && !tele_topics.includes(parts[2])) {
+        // best guess
+        parts[0] = "stat";
+      } else if (parts[0] == "stat" && tele_topics.includes(parts[2])) {
+        parts[0] = "tele";
+      }
+    }
+    return parts;
+  }
+
+  static process_resp(val) {
+    if (val === "ON" || val === "Online") {
+      val = true;
+    } else if (val === "OFF" || val === "Offline") {
+      val = false;
+    }
+    return val;
+  }
 }
 
-const split_key = (key) => {
-  const parts = key.split(/[\/.]/);
-  if (parts.length >= 3) {
-    const tele_topics = ["LWT", "INFO1", "INFO2", "INFO3", "STATE", "SENSOR"];
-    if (parts[0] == "tele" && !tele_topics.includes(parts[2])) {
-      // best guess
-      parts[0] = "stat";
-    } else if (parts[0] == "stat" && tele_topics.includes(parts[2])) {
-      parts[0] = "tele";
-    }
-  }
-  return parts;
-};
-
-const call_subs_recur = (sub_all, key, subs, update_obj, acked) => {
+const call_subs_recur = (gathered_subs, key, subs, update_obj, acked) => {
   for (const prop in update_obj) {
     const prop_subs = subs?.children[prop];
+    const gathered_subs_length = gathered_subs.length;
+    if (prop_subs) {
+      gathered_subs.push(...prop_subs.cb);
+    }
     const next_key = key + "." + prop;
     const next_obj = update_obj[prop];
-    call_subs(sub_all, prop_subs, next_key, next_obj, acked);
+    call_subs(gathered_subs, next_key, next_obj, acked);
     if (next_obj && typeof next_obj === 'object' && !Array.isArray(next_obj)) {
-      call_subs_recur(sub_all, next_key, prop_subs, next_obj, acked);
+      call_subs_recur(gathered_subs, next_key, prop_subs, next_obj, acked);
     }
+    // restore pre-recursion state
+    gathered_subs.length = gathered_subs_length;
   }
 }
 
-const call_subs = (sub_all, subs, key, value, acked) => {
-  if (subs && subs.cb) {
-    for (const cb of subs.cb) {
-      cb(key, value, acked);
-    }
-  }
-  if (sub_all) {
-    sub_all(key, value, acked);
+const call_subs = (gathered_subs, key, value, acked) => {
+  for (const cb of gathered_subs) {
+    cb(key, value, acked);
   }
 }
 

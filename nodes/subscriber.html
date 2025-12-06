@@ -46,7 +46,7 @@
   window.open_mqtt_topic_picker = async (e) => {
     e.preventDefault();
     const now = Date.now();
-    const fetch_interval_ms = 1000 * 30;
+    const fetch_interval_ms = 1000 * 2;
     if (now > last_fetch_time + fetch_interval_ms) {
       let db_data;
       try {

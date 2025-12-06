@@ -7,15 +7,20 @@ module.exports = function (RED) {
     const node = this;
 
     const topics_to_ignore = new Set();
-    this.db.sub_all = (topic, val, acked) => {
-      if (!acked) {
-        if (topic.startsWith("stat.") || topic.startsWith("tele.")) {
-          topic = "cmnd." + topic.substring(5);
-        }
-        node.send({ topic: topic.replaceAll('.', '/'), payload: val });
-        topics_to_ignore.add(topic);
+    this.db.subs.cb.push((topic, val, acked) => {
+      if (acked) {
+        return;
       }
-    };
+      if (topic.startsWith("stat.") || topic.startsWith("tele.")) {
+        topic = "cmnd." + topic.substring(5);
+      }
+      const msg = { topic: topic.replaceAll('.', '/') };
+      if (val !== undefined) {
+        msg.payload = val;
+      }
+      node.send(msg);
+      topics_to_ignore.add(topic);
+    });
 
     this.on("input", (msg) => {
       if (!topics_to_ignore.delete(msg.topic)) {

@@ -11,7 +11,7 @@ module.exports = function (RED) {
 
     const node = this;
     this.on("input", (msg) => {
-      const topic = msg.topic || node.topic;
+      const topic = node.topic || msg.topic;
       if (topic) {
         node.db.update(topic, msg.payload, node.create, false);
       }

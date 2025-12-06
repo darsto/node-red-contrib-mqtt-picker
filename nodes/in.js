@@ -12,12 +12,7 @@ module.exports = function (RED) {
       this.db = MqttDb.instance(RED);
       this.cb = this.db.subscribe(this.topic, (topic, val, ack) => {
         if (node.ack == "all" || (node.ack === "updates") == ack) {
-          if (val === "ON") {
-            val = 1;
-          } else if (val === "OFF") {
-            val = 0;
-          }
-          node.send({ topic, payload: val, ack, ts: Date.now() });
+          node.send({ topic, payload: MqttDb.process_resp(val), ack, ts: Date.now() });
         }
       });
     }
