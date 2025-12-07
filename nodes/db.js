@@ -81,13 +81,11 @@ class MqttDb {
         if (data[lastpart] === undefined) {
           data[lastpart] = {};
         }
-        Object.assign(data[lastpart], value);
-        call_subs_recur(gathered_subs, key, subs, data[lastpart], acked);
+        assign_recur(data[lastpart], value);
+        call_subs_recur(gathered_subs, key, subs, value, data[lastpart], acked);
       } else {
-        const number = Number(value);
-        const num_or_val = isNaN(number) ? value : number;
-        data[lastpart] = num_or_val;
-        call_subs(gathered_subs, key, num_or_val, acked);
+        data[lastpart] = value;
+        call_subs(gathered_subs, key, value, acked);
       }
     }
   }
@@ -197,7 +195,7 @@ class MqttDb {
   }
 }
 
-const call_subs_recur = (gathered_subs, key, subs, update_obj, acked) => {
+const call_subs_recur = (gathered_subs, key, subs, update_obj, obj, acked) => {
   for (const prop in update_obj) {
     const prop_subs = subs?.children[prop];
     const gathered_subs_length = gathered_subs.length;
@@ -205,10 +203,11 @@ const call_subs_recur = (gathered_subs, key, subs, update_obj, acked) => {
       gathered_subs.push(...prop_subs.cb);
     }
     const next_key = key + "." + prop;
-    const next_obj = update_obj[prop];
+    const next_update_obj = update_obj[prop];
+    const next_obj = obj[prop];
     call_subs(gathered_subs, next_key, next_obj, acked);
-    if (next_obj && typeof next_obj === 'object' && !Array.isArray(next_obj)) {
-      call_subs_recur(gathered_subs, next_key, prop_subs, next_obj, acked);
+    if (next_update_obj && typeof next_update_obj === 'object' && !Array.isArray(next_update_obj)) {
+      call_subs_recur(gathered_subs, next_key, prop_subs, next_update_obj, next_obj, acked);
     }
     // restore pre-recursion state
     gathered_subs.length = gathered_subs_length;
@@ -220,5 +219,16 @@ const call_subs = (gathered_subs, key, value, acked) => {
     cb(key, value, acked);
   }
 }
+
+const assign_recur = (dst, src) => {
+  Object.keys(src).forEach(key => {
+    const s_val = src[key]
+    const d_val = dst[key]
+    dst[key] = d_val && s_val && typeof d_val === 'object' && typeof s_val === 'object'
+                ? assign_recur(d_val, s_val)
+                : s_val
+  });
+  return dst;
+};
 
 module.exports = MqttDb;
