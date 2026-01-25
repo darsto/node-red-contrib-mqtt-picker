@@ -211,20 +211,20 @@
 
     // merge cmnd nodes with stat -> mark matching stat
     // nodes as writable
-    const set_writable = (dst, template) => {
-      if (!template) {
+    const set_writable = (dst, template, prefix) => {
+      if (!template || typeof template !== "object") {
         return;
       }
       for (const f in template) {
         let idx = dst.findIndex(o => o.id.endsWith("." + f));
         if (idx < 0) {
-          idx = dst.push({ id: f, children: [] }) - 1;
+          idx = dst.push({ id: prefix + f, children: [] }) - 1;
         }
         dst[idx].writable = true;
-        set_writable(dst[idx].children, template[f]);
+        set_writable(dst[idx].children, template[f], prefix + f + ".");
       }
     };
-    set_writable(stat.children, cmnd);
+    set_writable(stat.children, cmnd, "stat.");
 
     // and finally unroll everything in stat
     tree.push(...stat.children);
@@ -251,7 +251,7 @@
           children: explode_obj(value, id),
         };
       }
-      return { id, value };
+      return { id, value, children: [] };
     });
   }
 
