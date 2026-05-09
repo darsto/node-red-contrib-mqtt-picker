@@ -1,7 +1,7 @@
 const MqttDb = require("./db");
 
 module.exports = function (RED) {
-  function StringPickerNode(config) {
+  function MqttOutNode(config) {
     RED.nodes.createNode(this, config);
     this.topic = config.topic;
     this.name = config.name;
@@ -18,5 +18,5 @@ module.exports = function (RED) {
     });
   }
 
-  RED.nodes.registerType("mqtt-db-out", StringPickerNode);
+  RED.nodes.registerType("mqtt-db-out", MqttOutNode);
 };

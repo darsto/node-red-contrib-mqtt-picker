@@ -18,6 +18,11 @@
   </div>
 
   <div class="form-row">
+    <label for="node-input-requestlatest"><i class="fa fa-refresh"></i> Request latest state</label>
+    <input type="checkbox" id="node-input-requestlatest" style="width: auto;">
+  </div>
+
+  <div class="form-row">
     <label for="node-input-noexist"><i class="fa fa-question"></i> Return error when Object does not exist</label>
     <select id="node-input-noexist" style="width: 70%;">
       <option value="error">Return Error</option>
@@ -42,6 +47,7 @@
       payload: { value: "value" },
       name: { value: "" },
       attr: { value: "" },
+      requestlatest: { value: false },
       noexist: { value: "nothing" },
     },
     inputs: 1,
