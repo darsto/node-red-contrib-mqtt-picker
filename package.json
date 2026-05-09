@@ -13,12 +13,14 @@
   },
   "scripts": {
     "dev": "node ./scripts/dev-start.js",
+    "test": "node resources/mqtt-tree.test.js",
     "prepack": "echo 'Preparing package'"
   },
   "files": [
     "nodes/",
     "resources/treeview.js",
     "resources/treeview.css",
+    "resources/mqtt-tree.js",
     "README.md"
   ],
   "author": "",
