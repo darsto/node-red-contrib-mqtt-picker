@@ -21,7 +21,11 @@
     "resources/treeview.js",
     "resources/treeview.css",
     "resources/mqtt-tree.js",
-    "README.md"
+    "mqtt-picker1.jpg",
+    "mqtt-picker2.jpg",
+    "mqtt-picker3.jpg",
+    "README.md",
+    "LICENSE"
   ],
   "author": "",
   "license": "MIT",
