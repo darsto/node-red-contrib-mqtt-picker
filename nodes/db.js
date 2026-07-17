@@ -22,13 +22,24 @@ class MqttDb {
       setInterval(() => {
         MqttDb.inst.dump();
       }, 1000 * 120);
-      RED.httpAdmin.get("/mqtt-db/data", (req, res) => {
-        res.json(MqttDb.inst?.data || {});
-      });
-      RED.httpAdmin.post("/mqtt-db/data", (req, res) => {
-        if (MqttDb.inst && req.body?.action == "remove" && req.body?.id) {
-          MqttDb.inst.remove(req.body.id);
-        }
+      RED.httpAdmin.get(
+        "/mqtt-db/data",
+        RED.auth.needsPermission("mqtt-db.read"),
+        (req, res) => {
+          res.json(MqttDb.inst?.data || {});
+        },
+      );
+      RED.httpAdmin.post(
+        "/mqtt-db/data",
+        RED.auth.needsPermission("mqtt-db.write"),
+        (req, res) => {
+          if (MqttDb.inst && req.body?.action == "remove" && req.body?.id) {
+            MqttDb.inst.remove(req.body.id);
+          }
+          res.json(MqttDb.inst?.data || {});
+        },
+      );
+      RED.httpNode.get("/mqtt-db/data", (req, res) => {
         res.json(MqttDb.inst?.data || {});
       });
     }

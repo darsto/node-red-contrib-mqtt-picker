@@ -6,7 +6,6 @@ async function run() {
   const root = path.resolve(__dirname, '..');
   const dataDir = path.join(root, 'data');
 
-  // ensure data dir exists
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
   console.log('Installing local package into data/ ...');

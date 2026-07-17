@@ -24,3 +24,43 @@ To start a node-red instance on 127.0.0.1:1880:
 npm install
 npm run dev
 ```
+
+## HTTP API
+
+The MQTT database is available as a read-only runtime endpoint at
+`/mqtt-db/data`, relative to `httpNodeRoot`. This endpoint is separate from the
+editor endpoint with the same path. It uses Node-RED's standard `httpNodeAuth`
+authentication.
+
+Configure separate admin and runtime roots and HTTP node authentication in the
+Node-RED `settings.js`:
+
+```js
+httpAdminRoot: "/admin",
+httpNodeRoot: "/api",
+httpNodeAuth: {
+  user: "mqtt-site",
+  pass: "<bcrypt hash from node-red admin hash-pw>",
+},
+```
+
+Generate the password hash with Node-RED:
+
+```sh
+node-red admin hash-pw
+```
+
+The endpoint is then available at `/api/mqtt-db/data`:
+
+```sh
+curl --user mqtt-site:password \
+  https://node-red.example.com/api/mqtt-db/data
+```
+
+`httpNodeAuth` protects every endpoint below `httpNodeRoot`, not just this one.
+Use HTTPS. For a public website, keep the credentials on the website backend and
+proxy authenticated requests to Node-RED.
+
+The editor GET and POST endpoints remain under `httpAdminRoot` and require the
+Node-RED permissions `mqtt-db.read` and `mqtt-db.write` when `adminAuth` is
+enabled.
