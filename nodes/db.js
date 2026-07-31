@@ -1,5 +1,4 @@
-
-const fs = require('fs');
+const fs = require("fs");
 
 class MqttDb {
   static RED = null;
@@ -39,8 +38,112 @@ class MqttDb {
           res.json(MqttDb.inst?.data || {});
         },
       );
+
       RED.httpNode.get("/mqtt-db/data", (req, res) => {
         res.json(MqttDb.inst?.data || {});
+      });
+      RED.httpNode.post("/mqtt-db/subscribe", async (req, res) => {
+        const db = MqttDb.inst;
+        if (!db) {
+          res.statusCode = 500;
+          res.end();
+          return;
+        }
+
+        let topics;
+        try {
+          let body = req.body;
+          if (body === undefined) {
+            const chunks = [];
+            for await (const chunk of req) {
+              chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+            }
+            body = Buffer.concat(chunks).toString("utf8");
+          }
+
+          if (Buffer.isBuffer(body)) {
+            body = body.toString("utf8");
+          }
+          if (typeof body === "string") {
+            try {
+              body = JSON.parse(body);
+            } catch (err) {
+              throw new Error("Request body must be valid JSON");
+            }
+          }
+
+          topics = Array.isArray(body) ? body : body?.topics;
+          if (!Array.isArray(topics) || topics.length === 0) {
+            throw new Error(
+              "Request body must contain a non-empty topics array",
+            );
+          }
+          if (
+            topics.some((topic) =>
+              typeof topic !== "string" || topic.length === 0
+            )
+          ) {
+            throw new Error("Every topic must be a non-empty string");
+          }
+          topics = [...new Set(topics)];
+        } catch (err) {
+          if (req.aborted || res.destroyed || res.writableEnded) {
+            return;
+          }
+          res.statusCode = err.statusCode || 400;
+          res.setHeader("Content-Type", "application/json; charset=utf-8");
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
+
+        if (req.aborted || res.destroyed || res.writableEnded) {
+          return;
+        }
+
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+        res.setHeader("Cache-Control", "no-cache, no-transform");
+        res.setHeader("X-Accel-Buffering", "no");
+        if (typeof res.flushHeaders === "function") {
+          res.flushHeaders();
+        }
+
+        let closed = false;
+        const subscriptions = [];
+        const cleanup = () => {
+          if (closed) {
+            return;
+          }
+          closed = true;
+          for (const [topic, cb] of subscriptions) {
+            db.unsubscribe(topic, cb);
+          }
+        };
+        const send = (topic, value, acked) => {
+          if (closed || res.destroyed || res.writableEnded) {
+            return;
+          }
+          try {
+            res.write(JSON.stringify({ topic, value, acked }) + "\n");
+            if (typeof res.flush === "function") {
+              res.flush();
+            }
+          } catch (err) {
+            cleanup();
+            if (!res.destroyed && !res.writableEnded) {
+              res.end();
+            }
+          }
+        };
+
+        for (const topic of topics) {
+          subscriptions.push([topic, db.subscribe(topic, send)]);
+        }
+
+        req.on("aborted", cleanup);
+        res.on("close", cleanup);
+        res.on("error", cleanup);
+        res.on("finish", cleanup);
       });
     }
     return MqttDb.inst;
@@ -48,11 +151,11 @@ class MqttDb {
 
   dump(filePath) {
     const json = JSON.stringify(this.data, null, 2);
-    fs.writeFileSync(filePath || this.path, json, 'utf8');
+    fs.writeFileSync(filePath || this.path, json, "utf8");
   }
 
   load(filePath) {
-    const content = fs.readFileSync(filePath || this.path, 'utf8');
+    const content = fs.readFileSync(filePath || this.path, "utf8");
     this.data = JSON.parse(content);
   }
 
@@ -60,7 +163,7 @@ class MqttDb {
     let data = this.data;
     let subs = this.subs;
     const gathered_subs = [...subs.cb];
-    key = key.replaceAll('/', '.');
+    key = key.replaceAll("/", ".");
     const parts = this.split_key(key);
     if (parts.length == 0) {
       return 0;
@@ -69,7 +172,7 @@ class MqttDb {
     for (; i < parts.length - 1; i++) {
       const part = parts[i];
       const d = data[part];
-      if (typeof d !== 'object' || !d || Array.isArray(d)) {
+      if (typeof d !== "object" || !d || Array.isArray(d)) {
         if (!do_create_tree) {
           return;
         }
@@ -115,7 +218,7 @@ class MqttDb {
     for (; i < parts.length - 1; i++) {
       const part = parts[i];
       const d = data[part];
-      if (typeof d !== 'object' || !d || Array.isArray(d)) {
+      if (typeof d !== "object" || !d || Array.isArray(d)) {
         return;
       }
       data = data[part];
@@ -174,7 +277,7 @@ class MqttDb {
     let i = 0;
     for (; i < parts.length - 1; i++) {
       data = data[parts[i]];
-      if (typeof data !== 'object' || !data || Array.isArray(data)) {
+      if (typeof data !== "object" || !data || Array.isArray(data)) {
         return undefined;
       }
     }
@@ -217,27 +320,38 @@ const call_subs_recur = (gathered_subs, key, subs, update_obj, obj, acked) => {
     const next_update_obj = update_obj[prop];
     const next_obj = obj[prop];
     call_subs(gathered_subs, next_key, next_obj, acked);
-    if (next_update_obj && typeof next_update_obj === 'object' && !Array.isArray(next_update_obj)) {
-      call_subs_recur(gathered_subs, next_key, prop_subs, next_update_obj, next_obj, acked);
+    if (
+      next_update_obj && typeof next_update_obj === "object" &&
+      !Array.isArray(next_update_obj)
+    ) {
+      call_subs_recur(
+        gathered_subs,
+        next_key,
+        prop_subs,
+        next_update_obj,
+        next_obj,
+        acked,
+      );
     }
     // restore pre-recursion state
     gathered_subs.length = gathered_subs_length;
   }
-}
+};
 
 const call_subs = (gathered_subs, key, value, acked) => {
   for (const cb of gathered_subs) {
     cb(key, value, acked);
   }
-}
+};
 
 const assign_recur = (dst, src) => {
-  Object.keys(src).forEach(key => {
-    const s_val = src[key]
-    const d_val = dst[key]
-    dst[key] = d_val && s_val && typeof d_val === 'object' && typeof s_val === 'object'
-                ? assign_recur(d_val, s_val)
-                : s_val
+  Object.keys(src).forEach((key) => {
+    const s_val = src[key];
+    const d_val = dst[key];
+    dst[key] =
+      d_val && s_val && typeof d_val === "object" && typeof s_val === "object"
+        ? assign_recur(d_val, s_val)
+        : s_val;
   });
   return dst;
 };

@@ -57,6 +57,27 @@ curl --user mqtt-site:password \
   https://node-red.example.com/api/mqtt-db/data
 ```
 
+Subscribe to multiple topics with `POST /mqtt-db/subscribe`. The response stays
+open and streams each matching update as newline-delimited JSON (NDJSON):
+
+```sh
+curl -N --user mqtt-site:password \
+  -H 'Content-Type: application/json' \
+  --data '{"topics":["tele.device.SENSOR","stat.device.POWER"]}' \
+  https://node-red.example.com/api/mqtt-db/subscribe
+```
+
+Each output line has the update's `topic`, `value`, and `acked` state:
+
+```json
+{"topic":"stat.device.POWER","value":"ON","acked":true}
+{"topic":"tele.device.SENSOR.Temperature","value":21.5,"acked":true}
+```
+
+The request body may also be a JSON array of topic strings. Duplicate topics
+are subscribed only once. The subscriptions are removed when the HTTP client
+disconnects.
+
 `httpNodeAuth` protects every endpoint below `httpNodeRoot`, not just this one.
 Use HTTPS. For a public website, keep the credentials on the website backend and
 proxy authenticated requests to Node-RED.
