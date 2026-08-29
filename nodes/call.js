@@ -17,9 +17,9 @@ module.exports = function (RED) {
       if (topic) {
         let value;
         const parts = node.db.split_key(topic);
-        if (parts[0] == "stat" && node.requestlatest) {
-          const commandTopic = "cmnd." + parts.slice(1).join(".");
-          const resultTopic = "stat." + parts[1] + ".RESULT";
+        if (parts.length > 1 && node.requestlatest) {
+          const commandTopic = parts.join(".");
+          const resultTopic = parts[0] + ".RESULT";
           let cb = null;
           let timer = null;
 
@@ -37,11 +37,11 @@ module.exports = function (RED) {
               const topic_end = topic.substring(resultTopic.length + 1);
               if (topic_end == "Command") {
                 finish(undefined);
-              } else if (topic_end == parts[2]?.toUpperCase() ||
-                  (topic_end.length == parts[2]?.length + 1 &&
+              } else if (topic_end == parts[1]?.toUpperCase() ||
+                  (topic_end.length == parts[1]?.length + 1 &&
                    topic_end[topic_end.length - 1] == '1')
               ) {
-                // cmnd/X/POWER can result in stat/X/POWER1 (...and stat/X/POWER2)
+                // X.POWER can result in X.RESULT.POWER1.
                 finish(val);
               } else {
                 // race condition; resp to a different cmnd

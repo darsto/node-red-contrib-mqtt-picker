@@ -1,4 +1,7 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
 
 const MqttDb = require("./db");
@@ -54,6 +57,19 @@ test("merge updates", () => {
     a: 43,
     b: 45,
     nested: { one: 1, two: 2 },
+  });
+});
+
+test("object updates replace incompatible values and preserve arrays and null", () => {
+  const db = new MqttDb();
+
+  db.update("aa.value", "old");
+  db.update("aa.value", { nested: true });
+  db.update("aa.list", [1, 2]);
+  db.update("aa.empty", null);
+
+  assert.deepEqual(db.data, {
+    aa: { value: { nested: true }, list: [1, 2], empty: null },
   });
 });
 
@@ -160,4 +176,112 @@ test("subscribe + query", () => {
     { topic: "aa.bb", value: "", acked: false },
   ]);
   assert.deepEqual(topic.calls, []);
+});
+
+test("normalizes MQTT prefixes and separators", () => {
+  assert.equal(MqttDb.normalize_topic("stat/device/POWER"), "device.POWER");
+  assert.equal(MqttDb.normalize_topic("tele.device.STATE"), "device.STATE");
+  assert.equal(MqttDb.normalize_topic("cmnd/device/POWER"), "device.POWER");
+  assert.equal(MqttDb.normalize_topic("device/POWER"), "device.POWER");
+  assert.equal(MqttDb.normalize_topic("stat/stat/device"), "stat.device");
+});
+
+test("identifies only the exact tasmota discovery namespace", () => {
+  assert.equal(MqttDb.is_discovery_topic("tasmota/discovery"), true);
+  assert.equal(MqttDb.is_discovery_topic("tasmota/discovery/device/config"), true);
+  assert.equal(MqttDb.is_discovery_topic("tasmota.discovery.device.sensors"), true);
+  assert.equal(MqttDb.is_discovery_topic("Tasmota/discovery/device"), false);
+  assert.equal(MqttDb.is_discovery_topic("other/tasmota/discovery"), false);
+  assert.equal(MqttDb.is_discovery_topic("tasmota/discovery2"), false);
+});
+
+test("collapses matching numbered INFO wrappers", () => {
+  assert.equal(
+    MqttDb.normalize_topic("tele/device/INFO1/Info1/Version"),
+    "device.INFO1.Version",
+  );
+  assert.equal(
+    MqttDb.normalize_topic("tele/device/INFO1/Info2/Version"),
+    "device.INFO1.Info2.Version",
+  );
+  assert.equal(
+    MqttDb.normalize_topic("device/STATE/State/value"),
+    "device.STATE.State.value",
+  );
+  assert.deepEqual(
+    MqttDb.collapse_info_payload("device.INFO1", {
+      Info1: { Version: "1.0 tasmota" },
+    }),
+    { Version: "1.0 tasmota" },
+  );
+  assert.deepEqual(
+    MqttDb.collapse_info_payload("device.INFO1", {
+      Info2: { Version: "unchanged" },
+    }),
+    { Info2: { Version: "unchanged" } },
+  );
+});
+
+test("migrates legacy roots with defined collision precedence", () => {
+  const normalized = MqttDb.normalize_data({
+    cmnd: {
+      plug: { POWER: "cmnd", onlyCmnd: 1, nested: { cmnd: true } },
+    },
+    tele: {
+      plug: { POWER: "tele", onlyTele: 2, nested: { tele: true } },
+    },
+    stat: {
+      plug: { POWER: "stat", onlyStat: 3, nested: { stat: true } },
+    },
+    plug: {
+      POWER: "prefixless",
+      onlyDirect: 4,
+      nested: { direct: true },
+      INFO1: { Info1: { Version: "13.0.0(tasmota)" } },
+    },
+    tasmota: {
+      discovery: { device: { config: "ignored" } },
+      unrelated: "preserved",
+    },
+    other: { value: 5 },
+  });
+
+  assert.deepEqual(normalized, {
+    plug: {
+      POWER: "prefixless",
+      onlyCmnd: 1,
+      onlyTele: 2,
+      onlyStat: 3,
+      onlyDirect: 4,
+      nested: { cmnd: true, tele: true, stat: true, direct: true },
+      INFO1: { Version: "13.0.0(tasmota)" },
+    },
+    tasmota: { unrelated: "preserved" },
+    other: { value: 5 },
+  });
+});
+
+test("migration preserves mismatched INFO wrappers and removes empty discovery", () => {
+  assert.deepEqual(
+    MqttDb.normalize_data({
+      tele: { sensor: { INFO1: { Info2: { Version: "kept" } } } },
+      tasmota: { discovery: { nested: true } },
+    }),
+    { sensor: { INFO1: { Info2: { Version: "kept" } } } },
+  );
+});
+
+test("load applies legacy migration", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "mqtt-db-test-"));
+  const file = path.join(directory, "mqttdb.json");
+  t.after(() => fs.rmSync(directory, { recursive: true }));
+  fs.writeFileSync(file, JSON.stringify({
+    cmnd: { plug: { POWER: "command" } },
+    stat: { plug: { POWER: "state" } },
+  }));
+
+  const db = new MqttDb();
+  db.load(file);
+
+  assert.deepEqual(db.data, { plug: { POWER: "state" } });
 });

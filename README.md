@@ -7,8 +7,16 @@ All MQTT messages are effectively retained in a local JSON file.
 
 ![Topic picker](mqtt-picker2.jpg)
 
-This is also tailored towards tasmota MQTT states. Specifically,
-the topic picker shows stat, tele, and cmnd topics into one device.
+The database uses normalized, prefixless topic names. One leading `stat/`,
+`tele/`, or `cmnd/` is removed from incoming MQTT messages, so topics such as
+`stat/device/POWER` and `tele/device/SENSOR` are exposed as `device.POWER` and
+`device.SENSOR`. The topic picker displays that normalized database directly.
+
+Outgoing topics are slash-separated. When `device.INFO1.Version` is a string
+containing `tasmota` (case-insensitively), an outgoing topic such as
+`device.POWER` is published as `cmnd/device/POWER`. Other devices publish the
+prefixless `device/POWER` topic. Traffic in the exact
+`tasmota/discovery/#` namespace is ignored and is not stored or streamed.
 
 There's no MQTT library bundled. In fact, there's zero dependencies.
 MQTT messages need to be fed in/out from external sources into
@@ -63,15 +71,15 @@ open and streams each matching update as newline-delimited JSON (NDJSON):
 ```sh
 curl -N --user mqtt-site:password \
   -H 'Content-Type: application/json' \
-  --data '{"topics":["tele.device.SENSOR","stat.device.POWER"]}' \
+  --data '{"topics":["device.SENSOR","device.POWER"]}' \
   https://node-red.example.com/api/mqtt-db/subscribe
 ```
 
 Each output line has the update's `topic`, `value`, and `acked` state:
 
 ```json
-{"topic":"stat.device.POWER","value":"ON","acked":true}
-{"topic":"tele.device.SENSOR.Temperature","value":21.5,"acked":true}
+{"topic":"device.POWER","value":"ON","acked":true}
+{"topic":"device.SENSOR.Temperature","value":21.5,"acked":true}
 ```
 
 The request body may also be a JSON array of topic strings. Duplicate topics

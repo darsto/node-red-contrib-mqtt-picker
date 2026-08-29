@@ -156,10 +156,13 @@ class MqttDb {
 
   load(filePath) {
     const content = fs.readFileSync(filePath || this.path, "utf8");
-    this.data = JSON.parse(content);
+    this.data = MqttDb.normalize_data(JSON.parse(content));
   }
 
   update(key, value, do_create_tree = true, acked = true) {
+    if (MqttDb.is_discovery_topic(key)) {
+      return 0;
+    }
     let data = this.data;
     let subs = this.subs;
     const gathered_subs = [...subs.cb];
@@ -191,8 +194,8 @@ class MqttDb {
       if (subs) {
         gathered_subs.push(...subs.cb);
       }
-      if (typeof value === "object") {
-        if (data[lastpart] === undefined) {
+      if (is_plain_object(value)) {
+        if (!is_plain_object(data[lastpart])) {
           data[lastpart] = {};
         }
         assign_recur(data[lastpart], value);
@@ -205,6 +208,9 @@ class MqttDb {
   }
 
   query(key) {
+    if (MqttDb.is_discovery_topic(key)) {
+      return;
+    }
     call_subs(this.subs.cb, key, "", false);
   }
 
@@ -286,17 +292,83 @@ class MqttDb {
   }
 
   split_key(key) {
-    const parts = key.split(/[\/.]/);
-    if (parts.length >= 3) {
-      const tele_topics = ["LWT", "INFO1", "INFO2", "INFO3", "STATE", "SENSOR"];
-      if (parts[0] == "tele" && !tele_topics.includes(parts[2])) {
-        // best guess
-        parts[0] = "stat";
-      } else if (parts[0] == "stat" && tele_topics.includes(parts[2])) {
-        parts[0] = "tele";
+    return key.split(/[\/.]/);
+  }
+
+  static normalize_topic(topic) {
+    const parts = String(topic).replaceAll("/", ".").split(".");
+    if (["stat", "tele", "cmnd"].includes(parts[0])) {
+      parts.shift();
+    }
+    return MqttDb.collapse_info_topic(parts).join(".");
+  }
+
+  static is_discovery_topic(topic) {
+    const normalized = String(topic).replaceAll("/", ".");
+    return normalized === "tasmota.discovery" ||
+      normalized.startsWith("tasmota.discovery.");
+  }
+
+  static collapse_info_topic(parts) {
+    const collapsed = [];
+    for (const part of parts) {
+      const previous = collapsed[collapsed.length - 1];
+      const outer = /^INFO(\d+)$/.exec(previous || "");
+      const inner = /^Info(\d+)$/.exec(part);
+      if (outer && inner && outer[1] === inner[1]) {
+        continue;
+      }
+      collapsed.push(part);
+    }
+    return collapsed;
+  }
+
+  static collapse_info_payload(topic, value) {
+    const parts = String(topic).split(".");
+    const info = /^INFO(\d+)$/.exec(parts[parts.length - 1] || "");
+    if (!info || !is_plain_object(value)) {
+      return value;
+    }
+    const keys = Object.keys(value);
+    const wrapper = `Info${info[1]}`;
+    if (!Object.prototype.hasOwnProperty.call(value, wrapper)) {
+      return value;
+    }
+    if (keys.length === 1) {
+      return value[wrapper];
+    }
+    if (is_plain_object(value[wrapper])) {
+      const siblings = { ...value };
+      delete siblings[wrapper];
+      return assign_recur(clone_value(value[wrapper]), siblings);
+    }
+    return value;
+  }
+
+  static normalize_data(source) {
+    if (!is_plain_object(source)) {
+      return {};
+    }
+
+    const normalized = {};
+    for (const prefix of ["cmnd", "tele", "stat"]) {
+      if (is_plain_object(source[prefix])) {
+        assign_recur(normalized, clone_value(source[prefix]));
       }
     }
-    return parts;
+    for (const [key, value] of Object.entries(source)) {
+      if (!["cmnd", "tele", "stat"].includes(key)) {
+        assign_recur(normalized, { [key]: clone_value(value) });
+      }
+    }
+
+    if (is_plain_object(normalized.tasmota)) {
+      delete normalized.tasmota.discovery;
+      if (Object.keys(normalized.tasmota).length === 0) {
+        delete normalized.tasmota;
+      }
+    }
+    return collapse_info_data(normalized);
   }
 
   static process_resp(val) {
@@ -349,11 +421,58 @@ const assign_recur = (dst, src) => {
     const s_val = src[key];
     const d_val = dst[key];
     dst[key] =
-      d_val && s_val && typeof d_val === "object" && typeof s_val === "object"
+      is_plain_object(d_val) && is_plain_object(s_val)
         ? assign_recur(d_val, s_val)
         : s_val;
   });
   return dst;
+};
+
+const is_plain_object = (value) =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const clone_value = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(clone_value);
+  }
+  if (is_plain_object(value)) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, clone_value(child)]),
+    );
+  }
+  return value;
+};
+
+const collapse_info_data = (value, parent_key = "") => {
+  if (Array.isArray(value)) {
+    return value.map((child) => collapse_info_data(child));
+  }
+  if (!is_plain_object(value)) {
+    return value;
+  }
+
+  const result = {};
+  for (const [key, child] of Object.entries(value)) {
+    result[key] = collapse_info_data(child, key);
+  }
+
+  const info = /^INFO(\d+)$/.exec(parent_key);
+  if (info) {
+    const wrapper = `Info${info[1]}`;
+    const keys = Object.keys(result);
+    if (keys.length === 1 && keys[0] === wrapper) {
+      return result[wrapper];
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(result, wrapper) &&
+      is_plain_object(result[wrapper])
+    ) {
+      const wrapper_value = result[wrapper];
+      delete result[wrapper];
+      return assign_recur(wrapper_value, result);
+    }
+  }
+  return result;
 };
 
 module.exports = MqttDb;
