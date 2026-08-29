@@ -99,8 +99,7 @@ if (typeof window !== "undefined") {
     if (now > last_fetch_time + fetch_interval_ms) {
       let db_data;
       try {
-        const resp = await fetch("mqtt-db/data");
-        db_data = await resp.json();
+        db_data = await $.getJSON("mqtt-db/data");
       } catch (e) {
         db_data = {};
       }
@@ -151,15 +150,15 @@ if (typeof window !== "undefined") {
           e.preventDefault();
           e.stopPropagation();
           if (confirm(`Are you sure you want to remove node ${name}`)) {
-            const res = await fetch("mqtt-db/data", {
+            const db_data = await $.ajax({
+              url: "mqtt-db/data",
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+              contentType: "application/json",
+              data: JSON.stringify({
                 action: "remove",
                 id: nodeData.id,
               }),
             });
-            const db_data = await res.json();
             data = MqttTree.new(db_data);
             last_fetch_time = now;
             $dialog.dialog("close");
