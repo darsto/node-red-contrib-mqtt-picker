@@ -33,8 +33,13 @@ module.exports = function (RED) {
       if (MqttDb.is_discovery_topic(msg.topic)) {
         return;
       }
-      const topic = MqttDb.normalize_topic(msg.topic);
-      const payload = MqttDb.collapse_info_payload(topic, msg.payload);
+      let topic = MqttDb.normalize_topic(msg.topic);
+      const parts = node.db.split_key(topic);
+      if (parts[1] === "RESULT") {
+        parts.splice(1, 1);
+        topic = parts.join(".");
+      }
+      const payload = MqttDb.collapse_wrapper_payload(topic, msg.payload);
       node.db.update(topic, payload, true, true);
     });
 

@@ -238,7 +238,7 @@ test("identifies only the exact tasmota discovery namespace", () => {
   assert.equal(MqttDb.is_discovery_topic("tasmota/discovery2"), false);
 });
 
-test("collapses matching numbered INFO wrappers", () => {
+test("collapses exact INFO and STATUS wrappers", () => {
   assert.equal(
     MqttDb.normalize_topic("tele/device/INFO1/Info1/Version"),
     "device.INFO1.Version",
@@ -248,20 +248,40 @@ test("collapses matching numbered INFO wrappers", () => {
     "device.INFO1.Info2.Version",
   );
   assert.equal(
+    MqttDb.normalize_topic("tele/device/STATUS/Status/Module"),
+    "device.STATUS.Module",
+  );
+  assert.equal(
+    MqttDb.normalize_topic("device/STATUS/StatusMessage"),
+    "device.STATUS.StatusMessage",
+  );
+  assert.equal(
     MqttDb.normalize_topic("device/STATE/State/value"),
     "device.STATE.State.value",
   );
   assert.deepEqual(
-    MqttDb.collapse_info_payload("device.INFO1", {
+    MqttDb.collapse_wrapper_payload("device.INFO1", {
       Info1: { Version: "1.0 tasmota" },
     }),
     { Version: "1.0 tasmota" },
   );
   assert.deepEqual(
-    MqttDb.collapse_info_payload("device.INFO1", {
+    MqttDb.collapse_wrapper_payload("device.INFO1", {
       Info2: { Version: "unchanged" },
     }),
     { Info2: { Version: "unchanged" } },
+  );
+  assert.deepEqual(
+    MqttDb.collapse_wrapper_payload("device.STATUS", {
+      Status: { Module: 1 },
+    }),
+    { Module: 1 },
+  );
+  assert.deepEqual(
+    MqttDb.collapse_wrapper_payload("device.STATUS", {
+      StatusMessage: "unchanged",
+    }),
+    { StatusMessage: "unchanged" },
   );
 });
 
@@ -281,6 +301,7 @@ test("migrates legacy roots with defined collision precedence", () => {
       onlyDirect: 4,
       nested: { direct: true },
       INFO1: { Info1: { Version: "13.0.0(tasmota)" } },
+      STATUS: { Status: { Module: 1 } },
     },
     tasmota: {
       discovery: { device: { config: "ignored" } },
@@ -298,6 +319,7 @@ test("migrates legacy roots with defined collision precedence", () => {
       onlyDirect: 4,
       nested: { cmnd: true, tele: true, stat: true, direct: true },
       INFO1: { Version: "13.0.0(tasmota)" },
+      STATUS: { Module: 1 },
     },
     tasmota: { unrelated: "preserved" },
     other: { value: 5 },

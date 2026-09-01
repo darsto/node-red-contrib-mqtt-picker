@@ -309,7 +309,7 @@ class MqttDb {
     if (["stat", "tele", "cmnd"].includes(parts[0])) {
       parts.shift();
     }
-    return MqttDb.collapse_info_topic(parts).join(".");
+    return MqttDb.collapse_wrapper_topic(parts).join(".");
   }
 
   static is_discovery_topic(topic) {
@@ -318,13 +318,11 @@ class MqttDb {
       normalized.startsWith("tasmota.discovery.");
   }
 
-  static collapse_info_topic(parts) {
+  static collapse_wrapper_topic(parts) {
     const collapsed = [];
     for (const part of parts) {
       const previous = collapsed[collapsed.length - 1];
-      const outer = /^INFO(\d+)$/.exec(previous || "");
-      const inner = /^Info(\d+)$/.exec(part);
-      if (outer && inner && outer[1] === inner[1]) {
+      if (wrapper_for(previous) === part) {
         continue;
       }
       collapsed.push(part);
@@ -332,14 +330,13 @@ class MqttDb {
     return collapsed;
   }
 
-  static collapse_info_payload(topic, value) {
+  static collapse_wrapper_payload(topic, value) {
     const parts = String(topic).split(".");
-    const info = /^INFO(\d+)$/.exec(parts[parts.length - 1] || "");
-    if (!info || !is_plain_object(value)) {
+    const wrapper = wrapper_for(parts[parts.length - 1]);
+    if (!wrapper || !is_plain_object(value)) {
       return value;
     }
     const keys = Object.keys(value);
-    const wrapper = `Info${info[1]}`;
     if (!Object.prototype.hasOwnProperty.call(value, wrapper)) {
       return value;
     }
@@ -377,7 +374,7 @@ class MqttDb {
         delete normalized.tasmota;
       }
     }
-    return collapse_info_data(normalized);
+    return collapse_wrapper_data(normalized);
   }
 
   static process_resp(val) {
@@ -452,9 +449,17 @@ const clone_value = (value) => {
   return value;
 };
 
-const collapse_info_data = (value, parent_key = "") => {
+const wrapper_for = (key) => {
+  const info = /^INFO(\d+)$/.exec(key || "");
+  if (info) {
+    return `Info${info[1]}`;
+  }
+  return key === "STATUS" ? "Status" : undefined;
+};
+
+const collapse_wrapper_data = (value, parent_key = "") => {
   if (Array.isArray(value)) {
-    return value.map((child) => collapse_info_data(child));
+    return value.map((child) => collapse_wrapper_data(child));
   }
   if (!is_plain_object(value)) {
     return value;
@@ -462,12 +467,11 @@ const collapse_info_data = (value, parent_key = "") => {
 
   const result = {};
   for (const [key, child] of Object.entries(value)) {
-    result[key] = collapse_info_data(child, key);
+    result[key] = collapse_wrapper_data(child, key);
   }
 
-  const info = /^INFO(\d+)$/.exec(parent_key);
-  if (info) {
-    const wrapper = `Info${info[1]}`;
+  const wrapper = wrapper_for(parent_key);
+  if (wrapper) {
     const keys = Object.keys(result);
     if (keys.length === 1 && keys[0] === wrapper) {
       return result[wrapper];

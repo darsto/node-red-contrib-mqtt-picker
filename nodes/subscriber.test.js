@@ -50,6 +50,28 @@ test("normalizes prefixed and prefixless MQTT input", () => {
   assert.deepEqual(node.sent, []);
 });
 
+test("collapses received RESULT fields without changing existing data", () => {
+  const { db, node } = setup();
+
+  db.update("plug.RESULT.Legacy", "kept");
+  node.handlers.input({
+    topic: "stat/plug/RESULT",
+    payload: { POWER: "ON", Switch1: "OFF" },
+  });
+  node.handlers.input({
+    topic: "stat/plug/RESULT/Dimmer",
+    payload: 25,
+  });
+
+  assert.deepEqual(db.data.plug, {
+    RESULT: { Legacy: "kept" },
+    POWER: "ON",
+    Switch1: "OFF",
+    Dimmer: 25,
+    _update_ts: db.data.plug._update_ts,
+  });
+});
+
 test("drops discovery input and outbound queries", () => {
   const { db, node } = setup();
   const updates = [];
@@ -70,7 +92,7 @@ test("drops discovery input and outbound queries", () => {
   assert.deepEqual(updates, []);
 });
 
-test("collapses INFO topic and payload wrappers", () => {
+test("collapses INFO and STATUS topic and payload wrappers", () => {
   const { db, node } = setup();
 
   node.handlers.input({
@@ -85,12 +107,17 @@ test("collapses INFO topic and payload wrappers", () => {
     topic: "tele/plug/INFO3/Info2",
     payload: "not collapsed",
   });
+  node.handlers.input({
+    topic: "tele/plug/STATUS",
+    payload: { Status: { Module: 1, DeviceName: "Desk plug" } },
+  });
 
   assert.deepEqual(db.data, {
     plug: {
       INFO1: { Version: "13.0.0(tasmota)", Module: "Generic" },
       INFO2: { FriendlyName: "Desk plug" },
       INFO3: { Info2: "not collapsed" },
+      STATUS: { Module: 1, DeviceName: "Desk plug" },
       _update_ts: db.data.plug._update_ts,
     },
   });

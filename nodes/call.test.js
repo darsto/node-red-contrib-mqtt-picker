@@ -49,6 +49,8 @@ test("request latest publishes the prefixless command and matches X.RESULT", asy
   });
   await pending;
 
+  assert.equal(db.get("plug.RESULT"), undefined);
+  assert.equal(db.get("plug.POWER"), "ON");
   assert.deepEqual(call.sent, [{
     source: "test",
     topic: "plug.POWER",
@@ -71,6 +73,11 @@ test("request latest ignores unrelated results and preserves POWER1 matching", a
   });
   subscriber.handlers.input({
     topic: "stat/plug/RESULT",
+    payload: { TIMER1: 30 },
+  });
+  assert.deepEqual(call.sent, []);
+  subscriber.handlers.input({
+    topic: "stat/plug/RESULT",
     payload: { POWER1: "OFF" },
   });
   await pending;
@@ -78,5 +85,25 @@ test("request latest ignores unrelated results and preserves POWER1 matching", a
   assert.deepEqual(call.sent, [{
     topic: "plug.POWER",
     result: false,
+  }]);
+});
+
+test("request latest matches responses case-insensitively", async () => {
+  const { subscriber, call } = setup({
+    topic: "plug.Dimmer",
+    requestlatest: true,
+    attr: "payload",
+  });
+
+  const pending = call.handlers.input({});
+  subscriber.handlers.input({
+    topic: "stat/plug/RESULT",
+    payload: { Dimmer: 42 },
+  });
+  await pending;
+
+  assert.deepEqual(call.sent, [{
+    topic: "plug.Dimmer",
+    payload: 42,
   }]);
 });

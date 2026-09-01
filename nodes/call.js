@@ -19,7 +19,7 @@ module.exports = function (RED) {
         const parts = node.db.split_key(topic);
         if (parts.length > 1 && node.requestlatest) {
           const commandTopic = parts.join(".");
-          const resultTopic = parts[0] + ".RESULT";
+          const resultTopic = parts[0];
           let cb = null;
           let timer = null;
 
@@ -34,14 +34,14 @@ module.exports = function (RED) {
                 return;
               }
 
-              const topic_end = topic.substring(resultTopic.length + 1);
-              if (topic_end == "Command") {
+              const topic_end = topic.substring(resultTopic.length + 1)
+                .toUpperCase();
+              const command = parts[1]?.toUpperCase();
+              if (topic_end == "COMMAND") {
                 finish(undefined);
-              } else if (topic_end == parts[1]?.toUpperCase() ||
-                  (topic_end.length == parts[1]?.length + 1 &&
-                   topic_end[topic_end.length - 1] == '1')
+              } else if (
+                topic_end == command || topic_end == command + "1"
               ) {
-                // X.POWER can result in X.RESULT.POWER1.
                 finish(val);
               } else {
                 // race condition; resp to a different cmnd
