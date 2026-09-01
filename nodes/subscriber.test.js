@@ -36,8 +36,16 @@ test("normalizes prefixed and prefixless MQTT input", () => {
   node.handlers.input({ topic: "sensor/Temperature", payload: 21.5 });
 
   assert.deepEqual(db.data, {
-    plug: { POWER: "ON", STATE: { Uptime: 10 }, Dimmer: 50 },
-    sensor: { Temperature: 21.5 },
+    plug: {
+      POWER: "ON",
+      STATE: { Uptime: 10 },
+      Dimmer: 50,
+      _update_ts: db.data.plug._update_ts,
+    },
+    sensor: {
+      Temperature: 21.5,
+      _update_ts: db.data.sensor._update_ts,
+    },
   });
   assert.deepEqual(node.sent, []);
 });
@@ -83,6 +91,7 @@ test("collapses INFO topic and payload wrappers", () => {
       INFO1: { Version: "13.0.0(tasmota)", Module: "Generic" },
       INFO2: { FriendlyName: "Desk plug" },
       INFO3: { Info2: "not collapsed" },
+      _update_ts: db.data.plug._update_ts,
     },
   });
 });

@@ -29,6 +29,7 @@ test("basic", () => {
       bb: "val1",
       cc: "val2",
       dd: { 11: "val3" },
+      _update_ts: db.data.aa._update_ts,
     },
   });
 });
@@ -45,6 +46,27 @@ test("basic 2", () => {
 
   assert.equal(db.get("aa.cc"), undefined);
   assert.equal(db.get("aa.bb"), "changed");
+});
+
+test("tracks acknowledged updates on object-valued roots", () => {
+  const db = new MqttDb();
+
+  db.update("aa.bb", "first", true, false);
+  assert.equal(db.data.aa._update_ts, undefined);
+
+  db.update("aa.bb", "second", true, true);
+  assert.equal(typeof db.data.aa._update_ts, "number");
+
+  db.data.aa._update_ts = 1;
+  db.update("aa.cc", "third", true, true);
+  assert.ok(db.data.aa._update_ts > 1);
+
+  const timestamp = db.data.aa._update_ts;
+  db.update("aa.dd", "fourth", true, false);
+  assert.equal(db.data.aa._update_ts, timestamp);
+
+  db.update("single", "value", true, true);
+  assert.equal(db.data.single, "value");
 });
 
 test("merge updates", () => {
@@ -69,7 +91,12 @@ test("object updates replace incompatible values and preserve arrays and null", 
   db.update("aa.empty", null);
 
   assert.deepEqual(db.data, {
-    aa: { value: { nested: true }, list: [1, 2], empty: null },
+    aa: {
+      value: { nested: true },
+      list: [1, 2],
+      empty: null,
+      _update_ts: db.data.aa._update_ts,
+    },
   });
 });
 
@@ -269,6 +296,21 @@ test("migration preserves mismatched INFO wrappers and removes empty discovery",
     }),
     { sensor: { INFO1: { Info2: { Version: "kept" } } } },
   );
+});
+
+test("dump and load preserve last update timestamps", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "mqtt-db-test-"));
+  const file = path.join(directory, "mqttdb.json");
+  t.after(() => fs.rmSync(directory, { recursive: true }));
+
+  const source = new MqttDb();
+  source.update("plug.POWER", "ON", true, true);
+  source.dump(file);
+
+  const target = new MqttDb();
+  target.load(file);
+
+  assert.deepEqual(target.data, source.data);
 });
 
 test("load applies legacy migration", (t) => {

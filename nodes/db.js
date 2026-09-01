@@ -188,6 +188,11 @@ class MqttDb {
         gathered_subs.push(...subs.cb);
       }
     }
+
+    if (acked && is_plain_object(this.data[parts[0]])) {
+      this.data[parts[0]]._update_ts = Date.now();
+    }
+
     const lastpart = parts[i];
     if (data[lastpart] !== undefined || do_create_tree) {
       subs = subs?.children?.[lastpart];
