@@ -171,6 +171,10 @@ class MqttDb {
     if (parts.length == 0) {
       return 0;
     }
+    if (parts[0] === "cmnd") {
+      parts[0] = "stat";
+      key = parts.join(".");
+    }
     let i = 0;
     for (; i < parts.length - 1; i++) {
       const part = parts[i];

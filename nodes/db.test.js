@@ -34,6 +34,22 @@ test("basic", () => {
   });
 });
 
+test("replaces a leading cmnd segment with stat", () => {
+  const db = new MqttDb();
+  const sub = collect();
+
+  db.subscribe("stat.device.POWER", sub.cb);
+  db.update("cmnd/device/POWER", "ON");
+  db.update("cmnd.device.cmnd", "nested");
+
+  assert.equal(db.data.cmnd, undefined);
+  assert.equal(db.get("stat.device.POWER"), "ON");
+  assert.equal(db.get("stat.device.cmnd"), "nested");
+  assert.deepEqual(sub.calls, [
+    { topic: "stat.device.POWER", value: "ON", acked: true },
+  ]);
+});
+
 test("basic 2", () => {
   const db = new MqttDb();
 
