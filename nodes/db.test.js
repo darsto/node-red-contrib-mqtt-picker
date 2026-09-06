@@ -34,19 +34,36 @@ test("basic", () => {
   });
 });
 
-test("replaces a leading cmnd segment with stat", () => {
+test("notifies cmnd subscribers without storing commands", () => {
   const db = new MqttDb();
   const sub = collect();
 
-  db.subscribe("stat.device.POWER", sub.cb);
+  db.subscribe("cmnd.device.POWER", sub.cb);
   db.update("cmnd/device/POWER", "ON");
   db.update("cmnd.device.cmnd", "nested");
 
-  assert.equal(db.data.cmnd, undefined);
-  assert.equal(db.get("stat.device.POWER"), "ON");
-  assert.equal(db.get("stat.device.cmnd"), "nested");
+  assert.deepEqual(db.data, {});
   assert.deepEqual(sub.calls, [
-    { topic: "stat.device.POWER", value: "ON", acked: true },
+    { topic: "cmnd.device.POWER", value: "ON", acked: false },
+  ]);
+});
+
+test("notifies command payload descendants without creating database branches", () => {
+  const db = new MqttDb();
+  const parent = collect();
+  const child = collect();
+  db.subscribe("cmnd.device", parent.cb);
+  db.subscribe("cmnd.device.POWER", child.cb);
+
+  db.update("cmnd/device", { POWER: "ON" });
+
+  assert.deepEqual(db.data, {});
+  assert.deepEqual(parent.calls, [
+    { topic: "cmnd.device", value: { POWER: "ON" }, acked: false },
+    { topic: "cmnd.device.POWER", value: "ON", acked: false },
+  ]);
+  assert.deepEqual(child.calls, [
+    { topic: "cmnd.device.POWER", value: "ON", acked: false },
   ]);
 });
 
@@ -224,7 +241,7 @@ test("subscribe + query", () => {
 test("normalizes MQTT prefixes and separators", () => {
   assert.equal(MqttDb.normalize_topic("stat/device/POWER"), "device.POWER");
   assert.equal(MqttDb.normalize_topic("tele.device.STATE"), "device.STATE");
-  assert.equal(MqttDb.normalize_topic("cmnd/device/POWER"), "device.POWER");
+  assert.equal(MqttDb.normalize_topic("cmnd/device/POWER"), "cmnd.device.POWER");
   assert.equal(MqttDb.normalize_topic("device/POWER"), "device.POWER");
   assert.equal(MqttDb.normalize_topic("stat/stat/device"), "stat.device");
 });
@@ -313,11 +330,10 @@ test("migrates legacy roots with defined collision precedence", () => {
   assert.deepEqual(normalized, {
     plug: {
       POWER: "prefixless",
-      onlyCmnd: 1,
       onlyTele: 2,
       onlyStat: 3,
       onlyDirect: 4,
-      nested: { cmnd: true, tele: true, stat: true, direct: true },
+      nested: { tele: true, stat: true, direct: true },
       INFO1: { Version: "13.0.0(tasmota)" },
       STATUS: { Module: 1 },
     },

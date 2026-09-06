@@ -3,8 +3,9 @@ const test = require("node:test");
 
 const MqttDb = require("./db");
 const registerSubscriber = require("./subscriber");
+const registerIn = require("./in");
 
-const setup = () => {
+const setup = (inputConfig) => {
   const types = {};
   const RED = {
     nodes: {
@@ -23,8 +24,10 @@ const setup = () => {
   };
   MqttDb.inst = new MqttDb();
   registerSubscriber(RED);
+  registerIn(RED);
   const node = new types["mqtt-db-subscriber"]({});
-  return { db: MqttDb.inst, node };
+  const input = inputConfig ? new types["mqtt-db-in"](inputConfig) : undefined;
+  return { db: MqttDb.inst, node, input };
 };
 
 test("normalizes prefixed and prefixless MQTT input", () => {
@@ -39,7 +42,6 @@ test("normalizes prefixed and prefixless MQTT input", () => {
     plug: {
       POWER: "ON",
       STATE: { Uptime: 10 },
-      Dimmer: 50,
       _update_ts: db.data.plug._update_ts,
     },
     sensor: {
@@ -141,18 +143,46 @@ test("routes descendants according to the current INFO1 Version", () => {
   ]);
 });
 
-test("records command echoes as acknowledged updates without a loop", () => {
-  const { db, node } = setup();
-  const updates = [];
-  db.subscribe("plug.POWER", (topic, value, acked) => {
-    updates.push({ topic, value, acked });
-  });
+test("delivers incoming commands without storing or republishing them", () => {
+  for (const ack of ["commands", "all", "updates"]) {
+    const { db, node, input } = setup({ topic: "cmnd.plug.POWER", ack });
+    db.update("plug.POWER", "OFF");
+    const before = JSON.stringify(db.data);
+    const updates = [];
+    db.subscribe("plug.POWER", (...args) => updates.push(args));
 
-  node.handlers.input({ topic: "cmnd/plug/POWER", payload: "ON" });
+    node.handlers.input({ topic: "cmnd/plug/POWER", payload: "ON" });
+    node.handlers.input({ topic: "cmnd.plug.POWER", payload: "" });
 
-  assert.equal(db.get("plug.POWER"), "ON");
-  assert.deepEqual(updates, [
-    { topic: "plug.POWER", value: "ON", acked: true },
-  ]);
-  assert.deepEqual(node.sent, []);
+    assert.equal(JSON.stringify(db.data), before);
+    assert.deepEqual(updates, []);
+    assert.deepEqual(node.sent, []);
+    assert.deepEqual(
+      input.sent.map(({ topic, payload, ack }) => ({ topic, payload, ack })),
+      ack === "updates" ? [] : [
+        { topic: "cmnd.plug.POWER", payload: true, ack: false },
+        { topic: "cmnd.plug.POWER", payload: "", ack: false },
+      ],
+    );
+  }
+});
+
+test("delivers empty Tasmota query echoes only to command subscribers", () => {
+  const { db, node, input } = setup({ topic: "cmnd.plug.POWER", ack: "commands" });
+  db.update("plug.INFO1.Version", "13.2.0 tasmota");
+  db.update("plug.POWER", "ON");
+  const before = JSON.stringify(db.data);
+
+  db.query("cmnd.plug.POWER");
+  assert.deepEqual(node.sent, [{ topic: "cmnd/plug/POWER", payload: "" }]);
+  node.handlers.input(node.sent[0]);
+
+  assert.equal(JSON.stringify(db.data), before);
+  assert.equal(node.sent.length, 1);
+  assert.deepEqual(input.sent, [{
+    topic: "cmnd.plug.POWER",
+    payload: "",
+    ack: false,
+    ts: input.sent[0].ts,
+  }]);
 });

@@ -172,8 +172,9 @@ class MqttDb {
       return 0;
     }
     if (parts[0] === "cmnd") {
-      parts[0] = "stat";
-      key = parts.join(".");
+      this.notify(key, value);
+      call_subs(this.subs.cb, key, value, false);
+      return;
     }
     let i = 0;
     for (; i < parts.length - 1; i++) {
@@ -213,6 +214,22 @@ class MqttDb {
         data[lastpart] = value;
         call_subs(gathered_subs, key, value, acked);
       }
+    }
+  }
+
+  notify(key, value) {
+    key = key.replaceAll("/", ".");
+    let subs = this.subs;
+    const gathered_subs = [];
+    for (const part of this.split_key(key)) {
+      subs = subs?.children?.[part];
+      if (subs) {
+        gathered_subs.push(...subs.cb);
+      }
+    }
+    call_subs(gathered_subs, key, value, false);
+    if (is_plain_object(value)) {
+      call_subs_recur(gathered_subs, key, subs, value, value, false);
     }
   }
 
@@ -306,7 +323,10 @@ class MqttDb {
 
   static normalize_topic(topic) {
     const parts = String(topic).replaceAll("/", ".").split(".");
-    if (["stat", "tele", "cmnd"].includes(parts[0])) {
+    if (parts[0] === "cmnd") {
+      return parts.join(".");
+    }
+    if (["stat", "tele"].includes(parts[0])) {
       parts.shift();
     }
     return MqttDb.collapse_wrapper_topic(parts).join(".");
@@ -357,7 +377,7 @@ class MqttDb {
     }
 
     const normalized = {};
-    for (const prefix of ["cmnd", "tele", "stat"]) {
+    for (const prefix of ["tele", "stat"]) {
       if (is_plain_object(source[prefix])) {
         assign_recur(normalized, clone_value(source[prefix]));
       }

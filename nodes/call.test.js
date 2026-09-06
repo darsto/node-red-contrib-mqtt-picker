@@ -63,6 +63,75 @@ test("an injected cached call does not trigger mqtt-db-in", async () => {
   }]);
 });
 
+test("request latest supports single-part topics", async () => {
+  const { db, subscriber, call } = setup({
+    topic: "POWER",
+    requestlatest: true,
+  });
+
+  const pending = call.handlers.input({});
+  assert.deepEqual(subscriber.sent, [{ topic: "POWER", payload: "" }]);
+
+  subscriber.handlers.input({ topic: "POWER", payload: "ON" });
+  await pending;
+
+  assert.equal(db.get("POWER"), "ON");
+  assert.deepEqual(call.sent, [{ topic: "POWER", payload: true }]);
+});
+
+test("latest Temperature requests ignore command echoes and wait for the matching update", async () => {
+  const topic = "sonoff-zb-bridge.SENSOR.t2.Temperature";
+  const { db, subscriber, call, input } = setup({
+    topic,
+    requestlatest: true,
+  }, {
+    topic,
+    ack: "updates",
+  });
+  db.update("sonoff-zb-bridge.INFO1.Version", "13.2.0 tasmota");
+  subscriber.handlers.input({
+    topic: "stat/sonoff-zb-bridge/SENSOR",
+    payload: { t2: { Temperature: 25.58 } },
+  });
+  input.sent = [];
+  subscriber.send = (msg) => {
+    subscriber.sent.push(msg);
+    subscriber.handlers.input({ ...msg });
+  };
+
+  const pending = call.handlers.input({ payload: "" });
+
+  assert.deepEqual(subscriber.sent, [{
+    topic: "cmnd/sonoff-zb-bridge/SENSOR/t2/Temperature",
+    payload: "",
+  }]);
+  assert.equal(db.get(topic), 25.58);
+  assert.deepEqual(input.sent, []);
+
+  subscriber.handlers.input({
+    topic: "stat/sonoff-zb-bridge/SENSOR",
+    payload: { t6: { BatteryPercentage: 100 } },
+  });
+  await Promise.resolve();
+  assert.deepEqual(call.sent, []);
+  assert.deepEqual(input.sent, []);
+
+  subscriber.handlers.input({
+    topic: "tele/sonoff-zb-bridge/SENSOR",
+    payload: { t2: { Temperature: 25.59 } },
+  });
+  await pending;
+
+  assert.equal(db.get(topic), 25.59);
+  assert.deepEqual(call.sent, [{ topic, payload: 25.59 }]);
+  assert.deepEqual(input.sent, [{
+    topic,
+    payload: 25.59,
+    ack: true,
+    ts: input.sent[0].ts,
+  }]);
+});
+
 test("request latest publishes the prefixless command and matches X.RESULT", async () => {
   const { db, subscriber, call } = setup({
     topic: "plug.POWER",
@@ -118,6 +187,26 @@ test("request latest ignores unrelated results and preserves POWER1 matching", a
   assert.deepEqual(call.sent, [{
     topic: "plug.POWER",
     result: false,
+  }]);
+});
+
+test("request latest listens directly for an unknown command result", async () => {
+  const { subscriber, call } = setup({
+    topic: "plug.SENSOR.t2.Temperature",
+    requestlatest: true,
+    noexist: "undef",
+  });
+
+  const pending = call.handlers.input({});
+  subscriber.handlers.input({
+    topic: "stat/plug/RESULT",
+    payload: { Command: "Unknown" },
+  });
+  await pending;
+
+  assert.deepEqual(call.sent, [{
+    topic: "plug.SENSOR.t2.Temperature",
+    payload: undefined,
   }]);
 });
 

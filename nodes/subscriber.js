@@ -15,7 +15,7 @@ module.exports = function (RED) {
         return;
       }
       const parts = node.db.split_key(topic);
-      const version = parts.length > 1
+      const version = parts.length > 1 && parts[0] !== "cmnd"
         ? node.db.get(`${parts[0]}.INFO1.Version`)
         : undefined;
       const is_tasmota = typeof version === "string" &&
@@ -30,11 +30,15 @@ module.exports = function (RED) {
     this.db.subs.cb.push(outgoing);
 
     this.on("input", (msg) => {
+      let topic = MqttDb.normalize_topic(msg.topic);
+      const parts = node.db.split_key(topic);
+      if (parts[0] === "cmnd") {
+        node.db.notify(topic, msg.payload);
+        return;
+      }
       if (MqttDb.is_discovery_topic(msg.topic)) {
         return;
       }
-      let topic = MqttDb.normalize_topic(msg.topic);
-      const parts = node.db.split_key(topic);
       if (parts[1] === "RESULT") {
         parts.splice(1, 1);
         topic = parts.join(".");
