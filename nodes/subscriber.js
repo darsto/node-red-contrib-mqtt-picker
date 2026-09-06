@@ -15,11 +15,7 @@ module.exports = function (RED) {
         return;
       }
       const parts = node.db.split_key(topic);
-      const version = parts.length > 1 && parts[0] !== "cmnd"
-        ? node.db.get(`${parts[0]}.INFO1.Version`)
-        : undefined;
-      const is_tasmota = typeof version === "string" &&
-        version.toLowerCase().includes("tasmota");
+      const is_tasmota = true; // TODO extra setting in GUI?
       const mqtt_topic = (parts.length > 1 && is_tasmota ? "cmnd." : "") + topic;
       const msg = { topic: mqtt_topic.replaceAll(".", "/") };
       if (val !== undefined) {

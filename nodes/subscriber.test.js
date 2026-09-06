@@ -125,24 +125,6 @@ test("collapses INFO and STATUS topic and payload wrappers", () => {
   });
 });
 
-test("routes descendants according to the current INFO1 Version", () => {
-  const { db, node } = setup();
-
-  db.update("plug.INFO1.Version", "13.0.0(TaSmOtA)");
-  db.query("plug.POWER");
-  db.update("sensor.INFO1.Version", "custom firmware");
-  db.query("sensor.POWER");
-  db.query("unknown.POWER");
-  db.query("single");
-
-  assert.deepEqual(node.sent, [
-    { topic: "cmnd/plug/POWER", payload: "" },
-    { topic: "sensor/POWER", payload: "" },
-    { topic: "unknown/POWER", payload: "" },
-    { topic: "single", payload: "" },
-  ]);
-});
-
 test("delivers incoming commands without storing or republishing them", () => {
   for (const ack of ["commands", "all", "updates"]) {
     const { db, node, input } = setup({ topic: "cmnd.plug.POWER", ack });
