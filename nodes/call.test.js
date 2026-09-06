@@ -4,8 +4,9 @@ const test = require("node:test");
 const MqttDb = require("./db");
 const registerSubscriber = require("./subscriber");
 const registerCall = require("./call");
+const registerIn = require("./in");
 
-const setup = (callConfig) => {
+const setup = (callConfig, inputConfig) => {
   const types = {};
   const RED = {
     nodes: {
@@ -25,10 +26,42 @@ const setup = (callConfig) => {
   MqttDb.inst = new MqttDb();
   registerSubscriber(RED);
   registerCall(RED);
+  registerIn(RED);
   const subscriber = new types["mqtt-db-subscriber"]({});
   const call = new types["mqtt-db-call"](callConfig);
-  return { db: MqttDb.inst, subscriber, call };
+  const input = inputConfig
+    ? new types["mqtt-db-in"](inputConfig)
+    : undefined;
+  return { db: MqttDb.inst, subscriber, call, input };
 };
+
+test("an injected cached call does not trigger mqtt-db-in", async () => {
+  const topic = "sonoff-zb-bridge.SENSOR.t2.Temperature";
+  const { db, subscriber, call, input } = setup({
+    topic,
+    requestlatest: "false",
+    attr: "payload",
+  }, {
+    topic,
+    ack: "updates",
+  });
+  subscriber.handlers.input({
+    topic: "stat/sonoff-zb-bridge/SENSOR",
+    payload: { t2: { Temperature: 25.58 } },
+  });
+  input.sent = [];
+
+  await call.handlers.input({ _msgid: "inject", payload: "" });
+
+  assert.equal(db.get(topic), 25.58);
+  assert.deepEqual(subscriber.sent, []);
+  assert.deepEqual(input.sent, []);
+  assert.deepEqual(call.sent, [{
+    _msgid: "inject",
+    topic,
+    payload: 25.58,
+  }]);
+});
 
 test("request latest publishes the prefixless command and matches X.RESULT", async () => {
   const { db, subscriber, call } = setup({

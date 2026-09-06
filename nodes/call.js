@@ -53,7 +53,6 @@ module.exports = function (RED) {
           });
           node.db.unsubscribe(resultTopic, cb);
         } else {
-          node.db.query(topic);
           value = node.db.get(topic);
         }
         if (value === undefined) {
