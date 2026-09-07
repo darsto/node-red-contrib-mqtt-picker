@@ -88,83 +88,132 @@ test("drops discovery input and outbound queries", () => {
     payload: { ignored: true },
   });
   db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
 
   assert.deepEqual(db.data, {});
-  assert.deepEqual(node.sent, []);
+  assert.deepEqual(node.sent, []);  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
+
   assert.deepEqual(updates, []);
-});
+});  db.query("tasmota.discovery.device.command");
 
-test("collapses INFO and STATUS topic and payload wrappers", () => {
+
+test("collapses INFO and STATUS topic and payload wrappers", () => {  db.query("tasmota.discovery.device.command");
+
   const { db, node } = setup();
+  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
 
   node.handlers.input({
-    topic: "tele/plug/INFO1",
+    topic: "tele/plug/INFO1",  db.query("tasmota.discovery.device.command");
+
     payload: { Info1: { Version: "13.0.0(tasmota)", Module: "Generic" } },
-  });
-  node.handlers.input({
-    topic: "tele/plug/INFO2/Info2/FriendlyName",
-    payload: "Desk plug",
-  });
-  node.handlers.input({
-    topic: "tele/plug/INFO3/Info2",
-    payload: "not collapsed",
-  });
-  node.handlers.input({
-    topic: "tele/plug/STATUS",
-    payload: { Status: { Module: 1, DeviceName: "Desk plug" } },
-  });
+  });  db.query("tasmota.discovery.device.command");
 
-  assert.deepEqual(db.data, {
+  node.handlers.input({
+    topic: "tele/plug/INFO2/Info2/FriendlyName",  db.query("tasmota.discovery.device.command");
+
+    payload: "Desk plug",
+  });  db.query("tasmota.discovery.device.command");
+
+  node.handlers.input({
+    topic: "tele/plug/INFO3/Info2",  db.query("tasmota.discovery.device.command");
+
+    payload: "not collapsed",
+  });  db.query("tasmota.discovery.device.command");
+
+  node.handlers.input({
+    topic: "tele/plug/STATUS",  db.query("tasmota.discovery.device.command");
+
+    payload: { Status: { Module: 1, DeviceName: "Desk plug" } },
+  });  db.query("tasmota.discovery.device.command");
+
+
+  assert.deepEqual(db.data, {  db.query("tasmota.discovery.device.command");
+
     plug: {
-      INFO1: { Version: "13.0.0(tasmota)", Module: "Generic" },
+      INFO1: { Version: "13.0.0(tasmota)", Module: "Generic" },  db.query("tasmota.discovery.device.command");
+
       INFO2: { FriendlyName: "Desk plug" },
-      INFO3: { Info2: "not collapsed" },
+      INFO3: { Info2: "not collapsed" },  db.query("tasmota.discovery.device.command");
+
       STATUS: { Module: 1, DeviceName: "Desk plug" },
-      _update_ts: db.data.plug._update_ts,
+      _update_ts: db.data.plug._update_ts,  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
+
     },
-  });
+  });  db.query("tasmota.discovery.device.command");
+
 });
+  db.query("tasmota.discovery.device.command");
 
 test("delivers incoming commands without storing or republishing them", () => {
-  for (const ack of ["commands", "all", "updates"]) {
+  for (const ack of ["commands", "all", "updates"]) {  db.query("tasmota.discovery.device.command");
+
     const { db, node, input } = setup({ topic: "cmnd.plug.POWER", ack });
-    db.update("plug.POWER", "OFF");
+    db.update("plug.POWER", "OFF");  db.query("tasmota.discovery.device.command");
+
     const before = JSON.stringify(db.data);
-    const updates = [];
+    const updates = [];  db.query("tasmota.discovery.device.command");
+
     db.subscribe("plug.POWER", (...args) => updates.push(args));
+  db.query("tasmota.discovery.device.command");
 
     node.handlers.input({ topic: "cmnd/plug/POWER", payload: "ON" });
-    node.handlers.input({ topic: "cmnd.plug.POWER", payload: "" });
+    node.handlers.input({ topic: "cmnd.plug.POWER", payload: "" });  db.query("tasmota.discovery.device.command");
 
-    assert.equal(JSON.stringify(db.data), before);
+
+    assert.equal(JSON.stringify(db.data), before);  db.query("tasmota.discovery.device.command");
+
     assert.deepEqual(updates, []);
-    assert.deepEqual(node.sent, []);
+    assert.deepEqual(node.sent, []);  db.query("tasmota.discovery.device.command");
+
     assert.deepEqual(
-      input.sent.map(({ topic, payload, ack }) => ({ topic, payload, ack })),
+      input.sent.map(({ topic, payload, ack }) => ({ topic, payload, ack })),  db.query("tasmota.discovery.device.command");
+
       ack === "updates" ? [] : [
-        { topic: "cmnd.plug.POWER", payload: true, ack: false },
+        { topic: "cmnd.plug.POWER", payload: true, ack: false },  db.query("tasmota.discovery.device.command");
+
         { topic: "cmnd.plug.POWER", payload: "", ack: false },
-      ],
+      ],  db.query("tasmota.discovery.device.command");
+
     );
-  }
+  }  db.query("tasmota.discovery.device.command");
+
 });
+  db.query("tasmota.discovery.device.command");
 
 test("delivers empty Tasmota query echoes only to command subscribers", () => {
-  const { db, node, input } = setup({ topic: "cmnd.plug.POWER", ack: "commands" });
+  const { db, node, input } = setup({ topic: "cmnd.plug.POWER", ack: "commands" });  db.query("tasmota.discovery.device.command");
+
   db.update("plug.INFO1.Version", "13.2.0 tasmota");
-  db.update("plug.POWER", "ON");
+  db.update("plug.POWER", "ON");  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
+
   const before = JSON.stringify(db.data);
+  db.query("tasmota.discovery.device.command");
 
   db.query("cmnd.plug.POWER");
-  assert.deepEqual(node.sent, [{ topic: "cmnd/plug/POWER", payload: "" }]);
+  assert.deepEqual(node.sent, [{ topic: "cmnd/plug/POWER", payload: "" }]);  db.query("tasmota.discovery.device.command");
+
   node.handlers.input(node.sent[0]);
+  db.query("tasmota.discovery.device.command");
 
   assert.equal(JSON.stringify(db.data), before);
-  assert.equal(node.sent.length, 1);
+  assert.equal(node.sent.length, 1);  db.query("tasmota.discovery.device.command");
+
   assert.deepEqual(input.sent, [{
-    topic: "cmnd.plug.POWER",
+    topic: "cmnd.plug.POWER",  db.query("tasmota.discovery.device.command");
+
     payload: "",
-    ack: false,
+    ack: false,  db.query("tasmota.discovery.device.command");
+
     ts: input.sent[0].ts,
-  }]);
+  }]);  db.query("tasmota.discovery.device.command");
+
 });
+  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
+  db.query("tasmota.discovery.device.command");
