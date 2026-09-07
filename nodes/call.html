@@ -3,7 +3,7 @@
     <label for="node-input-topic"><i class="fa fa-tasks"></i> Topic</label>
     <div style="width: 70%; display: inline-flex;">
         <input type="text" id="node-input-topic" style="flex-grow: 1" placeholder="Topic" autocomplete="off">
-        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-folder-open"></i></a></div>
+        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-folder-open"></i></a>
     </div>
   </div>
 
@@ -18,8 +18,13 @@
   </div>
 
   <div class="form-row">
-    <label for="node-input-requestlatest"><i class="fa fa-refresh"></i> Request latest state</label>
+    <label for="node-input-requestlatest"><i class="fa fa-refresh"></i> Query device</label>
     <input type="checkbox" id="node-input-requestlatest" style="width: auto;">
+  </div>
+
+  <div class="form-row">
+    <label for="node-input-timeout">Timeout (ms)</label>
+    <input type="number" id="node-input-timeout" min="1" placeholder="5000">
   </div>
 
   <div class="form-row">
@@ -35,7 +40,7 @@
 </script>
 
 <script type="text/x-red" data-help-name="mqtt-db-call">
-  <p>Query most recent value for any mqtt topic</p>
+  <p>Read a cached device, object, or leaf. Query device sends an empty command only for prefix-bearing device.suffix paths and waits for a matching update. It does not guarantee fresh measurement. Generic and nested queries are unsupported; one query per device may run at a time.</p>
 </script>
 
 <script type="text/javascript">
@@ -44,10 +49,10 @@
     color: "#8fbaf7",
     defaults: {
       topic: { value: "" },
-      payload: { value: "value" },
       name: { value: "" },
       attr: { value: "" },
       requestlatest: { value: false },
+      timeout: { value: 5000, validate: (v) => !v || v < 100000 },
       noexist: { value: "nothing" },
     },
     inputs: 1,
@@ -62,6 +67,11 @@
     oneditprepare: function () {
       document.querySelector("#node-input-topic-pickbtn").onclick =
         window.open_mqtt_topic_picker;
+      const requestLatest = document.querySelector("#node-input-requestlatest");
+      const timeout = document.querySelector("#node-input-timeout");
+      const updateTimeout = () => { timeout.disabled = !requestLatest.checked; };
+      requestLatest.addEventListener("change", updateTimeout);
+      updateTimeout();
     },
   });
 </script>

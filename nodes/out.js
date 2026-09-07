@@ -3,20 +3,18 @@ const MqttDb = require("./db");
 module.exports = function (RED) {
   function MqttOutNode(config) {
     RED.nodes.createNode(this, config);
-    this.topic = config.topic;
-    this.name = config.name;
-    this.create = config.create;
-
-    this.db = MqttDb.instance(RED);
-
-    const node = this;
-    this.on("input", (msg) => {
-      const topic = node.topic || msg.topic;
-      if (topic) {
-        node.db.update(topic, msg.payload, node.create, false);
+    let initError;
+    try { this.db = MqttDb.instance(RED); }
+    catch (err) { initError = err; this.error(err); }
+    this.on("input", (msg, _send, done) => {
+      try {
+        if (initError) throw initError;
+        this.db.publish(config.topic || msg.topic, msg.payload, config.fullTopic || undefined);
+        if (done) done();
+      } catch (err) {
+        if (done) done(err); else this.error(err, msg);
       }
     });
   }
-
   RED.nodes.registerType("mqtt-db-out", MqttOutNode);
 };

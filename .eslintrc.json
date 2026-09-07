@@ -1,0 +1,6 @@
+{
+  "extends": ["plugin:jsdoc/recommended"],
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  }
+}

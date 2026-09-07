@@ -1,4 +1,8 @@
 node_modules/
+.tsbuild/
+/nodes/db.js
+/resources/mqtt-topic-parser.js
+/resources/mqtt-tree.js
 data/node_modules/
 data/.config.*
 data/flows*

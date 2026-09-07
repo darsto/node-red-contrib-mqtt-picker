@@ -3,26 +3,17 @@ const MqttDb = require("./db");
 module.exports = function (RED) {
   function MqttInNode(config) {
     RED.nodes.createNode(this, config);
-    this.topic = config.topic;
-    this.name = config.name;
-    this.ack = config.ack;
-
-    const node = this;
-    if (this.topic) {
+    let unsubscribe;
+    try {
       this.db = MqttDb.instance(RED);
-      this.cb = this.db.subscribe(this.topic, (topic, val, ack) => {
-        if (node.ack == "all" || (node.ack === "updates") == ack) {
-          node.send({ topic, payload: MqttDb.process_resp(val), ack, ts: Date.now() });
-        }
+      unsubscribe = this.db.subscribe(config.topic, (topic, payload, deleted) => {
+        this.send({ topic, payload, ...(deleted ? { deleted: true } : {}) });
       });
+    } catch (err) {
+      this.error(err);
+      this.status({ fill: "red", shape: "dot", text: "invalid subscription" });
     }
-
-    this.on("close", function () {
-      if (node.cb) {
-        node.db.unsubscribe(node.topic, node.cb);
-      }
-    });
+    this.on("close", () => unsubscribe?.());
   }
-
   RED.nodes.registerType("mqtt-db-in", MqttInNode);
 };

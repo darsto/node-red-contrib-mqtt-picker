@@ -3,7 +3,7 @@
     <label for="node-input-topic"><i class="fa fa-tasks"></i> Topic</label>
     <div style="width: 70%; display: inline-flex;">
         <input type="text" id="node-input-topic" style="flex-grow: 1" placeholder="Topic" autocomplete="off">
-        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-folder-open"></i></a></div>
+        <a id="node-input-topic-pickbtn" class="red-ui-button" style="margin-left: 10px;"><i class="fa fa-folder-open"></i></a>
     </div>
   </div>
 
@@ -12,18 +12,11 @@
     <input type="text" id="node-input-name" placeholder="Name">
   </div>
 
-  <div class="form-row">
-    <label for="node-input-ack"><i class="fa fa-question"></i> Ack</label>
-    <select id="node-input-ack" style="width: 70%;">
-      <option value="updates">Only updates (ack==true)</option>
-      <option value="commands">Only commands (ack==false)</option>
-      <option value="all">Send all events</option>
-    </select>
-  </div>
+  <div class="form-tips">device sends the whole updated device.<br>device.# sends each updated leaf.<br>device.SENSOR sends the whole updated SENSOR object.</div>
 </script>
 
 <script type="text/x-red" data-help-name="mqtt-db-in">
-  <p>mqtt-in node with a topic picker</p>
+  <p>Subscribe to received device state. Exact paths return the complete selected value; a final .# returns individual updated leaves. Commands and manual removals do not emit state updates.</p>
 </script>
 
 <script type="text/javascript">
@@ -33,7 +26,6 @@
     defaults: {
       topic: { value: "", required: true },
       name: { value: "" },
-      ack: { value: "updates" },
     },
     outputs: 1,
     icon: "font-awesome/fa-database",
@@ -45,7 +37,7 @@
     },
     oneditprepare: function () {
       document.querySelector("#node-input-topic-pickbtn").onclick =
-        window.open_mqtt_topic_picker;
+        (e) => window.open_mqtt_topic_picker(e, { subscribe: true });
     },
   });
 </script>

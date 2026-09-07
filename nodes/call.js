@@ -3,93 +3,47 @@ const MqttDb = require("./db");
 module.exports = function (RED) {
   function MqttCallNode(config) {
     RED.nodes.createNode(this, config);
-    this.topic = config.topic;
-    this.payload = config.payload;
-    this.name = config.name;
-    this.attr = config.attr;
-    this.noexist = config.noexist;
-    this.requestlatest = config.requestlatest === true || config.requestlatest === "true";
-
-    this.db = MqttDb.instance(RED);
-    const node = this;
-    this.on("input", async (msg) => {
-      const topic = node.topic || msg.topic;
-      if (topic) {
-        let value;
-        const parts = node.db.split_key(topic);
-        if (node.requestlatest) {
-          const requestedTopic = parts.join(".");
-          const rootTopic = parts[0];
-          const relativeTopic = requestedTopic.substring(rootTopic.length + 1)
-          const subscriptions = [];
-          let timer = null;
-
-          value = await new Promise((resolve) => {
-            const finish = (value) => {
-              clearTimeout(timer);
-              resolve(value);
-            };
-
-            subscriptions.push([
-              requestedTopic,
-              node.db.subscribe(requestedTopic, (topic, val, acked) => {
-                if (acked && topic === requestedTopic) {
-                  finish(
-                    relativeTopic.toUpperCase() === "COMMAND" ? undefined : val,
-                  );
-                }
-              }),
-            ]);
-            // Requesting i.e. Power sometimes results in Power1 topic
-            if (relativeTopic) {
-              const numberedTopic = requestedTopic + '1';
-              subscriptions.push([
-                numberedTopic,
-                node.db.subscribe(numberedTopic, (topic, val, acked) => {
-                  if (acked && topic === numberedTopic) {
-                    finish(val);
-                  }
-                }),
-              ]);
-            }
-            // Invalid requests result in `<device>.Command` topic which
-            // lets us finish immediately without waiting the 5s timeout
-            if (
-              relativeTopic && relativeTopic.toUpperCase() !== "COMMAND"
-            ) {
-              const unknownTopic = `${rootTopic}.Command`;
-              subscriptions.push([
-                unknownTopic,
-                node.db.subscribe(unknownTopic, (topic, val, acked) => {
-                  if (acked && topic === unknownTopic) {
-                    finish(undefined);
-                  }
-                }),
-              ]);
-            }
-
-            timer = setTimeout(() => finish(undefined), 5000);
-            node.db.query(requestedTopic);
-          });
-          for (const [responseTopic, cb] of subscriptions) {
-            node.db.unsubscribe(responseTopic, cb);
-          }
-        } else {
-          value = node.db.get(topic);
-        }
-        if (value === undefined) {
-          if (node.noexist == "error") {
-            throw new Error("MQTT Topic '" + topic + "' doesn't exist");
-          } else if (node.noexist == "nothing") {
-            return;
-          }
-        }
+    let initError;
+    try { this.db = MqttDb.instance(RED); }
+    catch (err) { initError = err; this.error(err); }
+    const controllers = new Set();
+    let closed = false;
+    this.on("input", async (msg, send, done) => {
+      const controller = new AbortController();
+      controllers.add(controller);
+      try {
+        if (initError) throw initError;
+        if (closed) throw new Error("Node is closed");
+        const topic = config.topic || msg.topic;
+        const requestLatest = config.requestlatest === true || config.requestlatest === "true";
+        const value = requestLatest
+          ? await this.db.query(topic, {
+            timeout: Number(config.timeout === "" || config.timeout == null ? 5000 : config.timeout),
+            signal: controller.signal,
+          })
+          : this.db.get(topic);
+        if (closed) return;
+        if (value === undefined && config.noexist === "error") throw new Error("Device property does not exist: " + topic);
+        if (value === undefined && (!config.noexist || config.noexist === "nothing")) return;
         msg.topic = topic;
-        msg[this.attr || "payload"] = MqttDb.process_resp(value);
-        this.send(msg);
+        // An attribute is a literal top-level message key, never a prototype setter.
+        Object.defineProperty(msg, config.attr || "payload", {
+          value, enumerable: true, configurable: true, writable: true,
+        });
+        (send || ((message) => this.send(message)))(msg);
+      } catch (err) {
+        if (done) { done(err); done = null; }
+        else if (!closed) this.error(err, msg);
+      } finally {
+        controllers.delete(controller);
+        if (done) done();
       }
     });
+    this.on("close", () => {
+      closed = true;
+      for (const controller of controllers) controller.abort();
+      controllers.clear();
+    });
   }
-
   RED.nodes.registerType("mqtt-db-call", MqttCallNode);
 };

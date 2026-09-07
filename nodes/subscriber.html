@@ -2,19 +2,24 @@
   <div class="form-row">
     Connect this node to "mqtt in" and "mqtt out" nodes.
   </div>
+  <div class="form-row">
+    <label for="node-input-fullTopics">Full Topics</label>
+    <textarea id="node-input-fullTopics" rows="5" style="width:70%" placeholder="%prefix%/%topic%/&#10;%topic%/"></textarea>
+  </div>
+  <div class="form-tips">One pattern per line.<br>Use %topic% for a device and optional %prefix% for cmnd/stat/tele.<br>End each pattern with /.<br>Example: tasmota/%topic%/%prefix%/ or sensors/%topic%/.</div>
 </script>
 
 <script type="text/x-red" data-help-name="mqtt-db-subscriber">
-  <p>Connect this node to "mqtt in" and "mqtt out" nodes.</p>
+  <p>Use one subscriber connected to MQTT input and output. Configure the input to deliver decoded JSON values. Full Topic patterns control incoming parsing and outgoing routing. Prefix-bearing devices convert on/true and off/false values to 1 and 0 recursively.</p>
 </script>
 
 
-<script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
 <link
   rel="stylesheet"
   href="resources/node-red-contrib-mqtt-picker/treeview.css"
 />
 <script src="resources/node-red-contrib-mqtt-picker/treeview.js"></script>
+<script src="resources/node-red-contrib-mqtt-picker/mqtt-topic-parser.js"></script>
 <script src="resources/node-red-contrib-mqtt-picker/mqtt-tree.js"></script>
 
 <script type="text/javascript">
@@ -22,6 +27,7 @@
     category: "storage",
     color: "burlywood",
     defaults: {
+      fullTopics: { value: "%prefix%/%topic%/\n%topic%/", required: true },
     },
     inputs: 1,
     outputs: 1,
