@@ -3,6 +3,7 @@ import fs = require("node:fs");
 class MqttDb {
   // A tree of MQTT properties built off MQTT topics
   public declare tree: Record<string, MqttDbNode>;
+  private root: MqttDbNode;
 
   // Publisher supplied by the active mqttdb-subscriber node.
   // MqttDb exists even without any mqttdb-subscriber node.
@@ -21,6 +22,7 @@ class MqttDb {
   // New empty db
   public constructor() {
     this.tree = Object.create(null);
+    this.root = new MqttDbNode();
     this.full_topics = MqttDb.patterns();
     this.publisher = null;
     this.json_dump_interval = null;
@@ -70,7 +72,7 @@ class MqttDb {
     const parsed = MqttTopicParser.parse(key, true);
     const parts = [];
     let children = this.tree;
-    let node: MqttDbNode;
+    let node = this.root;
     for (const input of parsed.parts) {
       const part = storedKey(children, input);
       if (!children[part]) put(children, part, new MqttDbNode());
@@ -167,7 +169,7 @@ class MqttDb {
     for (const part of relativePath.reverse()) stored = { [part]: stored };
     stored = json(stored);
     const changed = new Map<string, string[]>();
-    const subscriptions = new Set<Subscription>();
+    const subscriptions = new Set<Subscription>(this.root.subscribers);
     merge(this.tree, name, stored, [name], changed, subscriptions);
 
     // Attach the matched route to its device node and update object route metadata.

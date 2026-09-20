@@ -12,11 +12,11 @@
     <input type="text" id="node-input-name" placeholder="Name">
   </div>
 
-  <div class="form-tips">device sends the whole updated device.<br>device.# sends each updated leaf.<br>device.SENSOR sends the whole updated SENSOR object.</div>
+  <div class="form-tips"># sends each updated leaf across all topics.<br>device sends the whole updated device.<br>device.# sends each updated leaf.<br>device.SENSOR sends the whole updated SENSOR object.</div>
 </script>
 
 <script type="text/x-red" data-help-name="mqtt-db-in">
-  <p>Subscribe to received device state. Exact paths return the complete selected value; a final .# returns individual updated leaves. Commands and manual removals do not emit state updates.</p>
+  <p>Subscribe to received device state. Exact paths return the complete selected value; a final .# returns individual updated leaves. Use # by itself for updated leaves across all topics. Commands and manual removals do not emit state updates.</p>
 </script>
 
 <script type="text/javascript">

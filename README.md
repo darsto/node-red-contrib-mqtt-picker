@@ -43,6 +43,7 @@ values stay unchanged. Command echoes and `tasmota/discovery/#` are ignored.
 | `desk` | Whole updated device object, once per incoming update |
 | `desk.SENSOR` | Whole updated SENSOR object |
 | `desk.POWER` | Updated POWER value |
+| `#` | Each individual updated leaf across all topics |
 | `desk.#` | Each individual updated leaf, with its own path |
 | `desk.SENSOR.#` | Each updated leaf below SENSOR |
 

@@ -3,7 +3,7 @@ class MqttTopicParser {
   // Format JSON key parts as an escaped MQTT picker path.
   public static format(parts: unknown[], wildcard = false): string {
     const path = parts.map((part) => String(part).replace(/[\\.#]/g, "\\$&")).join(".");
-    return wildcard ? path + ".#" : path;
+    return wildcard ? (path ? path + ".#" : "#") : path;
   }
 
   // Parse an escaped MQTT picker path and optional terminal wildcard.
@@ -30,7 +30,7 @@ class MqttTopicParser {
     const wildcard = hash && part === "#" && allowWildcard;
     if (hash && !wildcard) throw new Error("Escape a literal #; only subscriptions accept a final .#");
     if (!wildcard) parts.push(part);
-    if (!parts.length || !parts[0]) throw new Error("A device name is required");
+    if ((!parts.length && !wildcard) || (parts.length && !parts[0])) throw new Error("A device name is required");
     return { parts, wildcard };
   }
 }

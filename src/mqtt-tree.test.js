@@ -9,7 +9,10 @@ test("shared paths round trip unusual device/property names and terminal wildcar
     assert.deepEqual(MqttTopicParser.parse(path), { parts, wildcard: false });
     assert.deepEqual(MqttTopicParser.parse(path + ".#", true), { parts, wildcard: true });
   }
-  for (const invalid of ["", "#", "desk.#.x", "desk.a#b", "desk\\x", "desk\\"]) {
+  assert.deepEqual(MqttTopicParser.parse("#", true), { parts: [], wildcard: true });
+  assert.equal(MqttTopicParser.format([], true), "#");
+  assert.throws(() => MqttTopicParser.parse("#"));
+  for (const invalid of ["", "desk.#.x", "desk.a#b", "desk\\x", "desk\\"]) {
     assert.throws(() => MqttTopicParser.parse(invalid, true));
   }
 });

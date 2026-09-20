@@ -40,6 +40,19 @@ test("generic wildcard inputs match case-insensitive topics", () => {
   ]);
 });
 
+test("root wildcard input subscribes to all topics", () => {
+  const { db, bridge, make } = setup();
+  const input = make("in", { topic: "#" });
+  bridge.handlers.input({ topic: "stat/desk/RESULT", payload: { POWER: 1 } });
+  bridge.handlers.input({ topic: "weather/outdoor", payload: 21 });
+  assert.deepEqual(input.sent, [
+    { topic: "desk.Power", payload: 1 },
+    { topic: "desk._update_ts", payload: db.get("desk._update_ts") },
+    { topic: "weather.outdoor", payload: 21 },
+    { topic: "weather._update_ts", payload: db.get("weather._update_ts") },
+  ]);
+});
+
 test("generic JSON output uses an explicit pattern without changing the database", () => {
   const { db, bridge, make } = setup("devices/%topic%/");
   const output = make("out", { topic: "fan.set", fullTopic: "devices/%topic%/" });
