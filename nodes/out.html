@@ -13,6 +13,14 @@
   </div>
 
   <div class="form-row">
+    <label for="node-input-mode"><i class="fa fa-exchange"></i> Mode</label>
+    <select id="node-input-mode" style="width: 70%;">
+      <option value="publish">Publish</option>
+      <option value="persist">Persist</option>
+    </select>
+  </div>
+
+  <div class="form-row" id="node-row-fullTopic">
     <label for="node-input-fullTopic">Full Topic</label>
     <input type="text" id="node-input-fullTopic" placeholder="Optional: pattern for an unknown device">
   </div>
@@ -22,6 +30,7 @@
 
 <script type="text/x-red" data-help-name="mqtt-db-out">
   <p>Publish once to device.suffix using its Full Topic. Nested JSON fields are not destinations. Supply one object payload for a JSON command. Sending never changes cached values. Full Topic is required for an unknown or unassigned legacy device.</p>
+  <p>Persist merges the payload into the cached tree at device.suffix without publishing and notifies subscribers like a received message.</p>
 </script>
 
 <script type="text/javascript">
@@ -31,6 +40,7 @@
     defaults: {
       topic: { value: "" },
       name: { value: "" },
+      mode: { value: "publish" },
       fullTopic: { value: "" },
     },
     inputs: 1,
@@ -45,6 +55,13 @@
     oneditprepare: function () {
       document.querySelector("#node-input-topic-pickbtn").onclick =
         (e) => window.open_mqtt_topic_picker(e, { publish: true });
+      const mode = document.querySelector("#node-input-mode");
+      mode.value = this.mode || "publish";
+      const updateFullTopic = () => {
+        document.querySelector("#node-row-fullTopic").style.display = mode.value === "persist" ? "none" : "";
+      };
+      mode.addEventListener("change", updateFullTopic);
+      updateFullTopic();
     },
   });
 </script>

@@ -9,7 +9,8 @@ module.exports = function (RED) {
     this.on("input", (msg, _send, done) => {
       try {
         if (initError) throw initError;
-        this.db.publish(config.topic || msg.topic, msg.payload, config.fullTopic || undefined);
+        if (config.mode === "persist") this.db.persist(config.topic || msg.topic, msg.payload);
+        else this.db.publish(config.topic || msg.topic, msg.payload, config.fullTopic || undefined);
         if (done) done();
       } catch (err) {
         if (done) done(err); else this.error(err, msg);

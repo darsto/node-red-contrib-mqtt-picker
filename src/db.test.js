@@ -496,6 +496,18 @@ test("outgoing JSON is one publication and never creates reported state or notif
   assert.throws(() => db.publish("fan.#", 3), /subscriptions/);
 });
 
+test("persisted values merge into cached state and notify without publishing", () => {
+  const { db, sent } = setup();
+  db.receive("tele/heatpump/SENSOR", { ENERGY: { Total: 5 } });
+  const energy = events(db, "heatpump.Energy");
+  db.persist("heatpump.energy", { Day: 21, LastTotal: 5 });
+  assert.equal(sent.length, 0);
+  assert.deepEqual(db.get("heatpump.Energy"), { Total: 5, Day: 21, LastTotal: 5 });
+  assert.equal(energy.calls.length, 1);
+  db.persist("new.value", 1);
+  assert.equal(db.get("new.value"), 1);
+});
+
 test("unrouted paths publish directly and explicit patterns are one-shot", () => {
   const { db, sent } = setup();
   db.publish("new.POWER", 1);

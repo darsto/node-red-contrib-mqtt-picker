@@ -97,6 +97,17 @@ class MqttDb {
     this.publisher({ topic, payload });
   }
 
+  // Merge a value into the tree without publishing a message.
+  public persist(key: string, value: any): void {
+    const parts = MqttDbNode.resolve(this.tree, MqttTopicParser.parse(key).parts);
+    let stored = json(value, false, new Set<any>(), 0, true);
+    for (const part of parts.slice(1).reverse()) stored = { [part]: stored };
+    const changed = new Map<string, string[]>();
+    const subscriptions = new Set<Subscription>(this.root.subscribers);
+    merge(this.tree, parts[0], stored, [parts[0]], changed, subscriptions);
+    this.notify(changed, subscriptions);
+  }
+
   // MQTT publish a query and wait for value
   public query(key: string, { timeout = 5000, signal }: { timeout?: number; signal?: AbortSignal } = {}): Promise<any> {
     if (!Number.isFinite(timeout) || timeout <= 0) return Promise.reject(new Error("Query timeout must be positive"));
@@ -180,7 +191,12 @@ class MqttDb {
       merge(route.children, "_update_ts", Date.now(), [...storedRoutePath, "_update_ts"], changed, subscriptions);
     }
 
-    // Notify subscribers - first gather them, then notify 1 by 1
+    this.notify(changed, subscriptions);
+    return true;
+  }
+
+  // Notify subscribers - first gather them, then notify 1 by 1
+  private notify(changed: Map<string, string[]>, subscriptions: Set<Subscription>): void {
     const paths = [...changed.values()];
     const deliveries: [Subscription, string, any, boolean][] = [];
     for (const sub of subscriptions) {
@@ -202,7 +218,6 @@ class MqttDb {
       if (!sub.node.subscribers.has(sub)) continue;
       try { sub.cb(path, next, deleted); } catch (err) { this.on_error(err); }
     }
-    return true;
   }
 
   // Remove a picker path without publishing a message.
