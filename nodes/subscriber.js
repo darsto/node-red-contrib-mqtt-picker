@@ -4,6 +4,7 @@ module.exports = function (RED) {
   function MqttDbSubscriber(config) {
     RED.nodes.createNode(this, config);
     let initError;
+    const ignored = (config.ignoredTopics || "").split(/\r?\n/).map((p) => p.trim()).filter(Boolean);
     try {
       this.db = MqttDb.instance(RED);
       this.db.init((msg) => this.send(msg),
@@ -17,7 +18,7 @@ module.exports = function (RED) {
       try {
         if (initError) throw initError;
         if (typeof msg.topic !== "string") throw new Error("MQTT topic must be a string");
-        this.db.receive(msg.topic, msg.payload);
+        if (!ignored.some((prefix) => msg.topic.startsWith(prefix))) this.db.receive(msg.topic, msg.payload);
         if (done) done();
       } catch (err) {
         if (done) done(err); else this.error(err, msg);

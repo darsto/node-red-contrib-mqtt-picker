@@ -29,6 +29,18 @@ test("the legacy default also accepts generic topic trees", () => {
   assert.deepEqual(db.get("zb.b2"), { Device: "0x1DA8", Power: 2 });
 });
 
+test("ignored topic prefixes are never stored", () => {
+  const { db, bridge } = setup(undefined, { ignoredTopics: " zb/b \n\nhomeassistant/\n" });
+  const completed = [];
+  bridge.handlers.input({ topic: "zb/b2", payload: { Power: 2 } }, undefined, (err) => completed.push(err));
+  bridge.handlers.input({ topic: "homeassistant/x", payload: { Power: 1 } });
+  bridge.handlers.input({ topic: "zb/a1", payload: { Power: 3 } });
+  assert.deepEqual(completed, [undefined]);
+  assert.deepEqual(Object.keys(db.data()), ["zb"]);
+  assert.deepEqual(db.get("zb.a1"), { Power: 3 });
+  assert.equal(db.get("zb.b2"), undefined);
+});
+
 test("generic wildcard inputs match case-insensitive topics", () => {
   const { db, bridge, make } = setup();
   const input = make("in", { topic: "zb.#" });

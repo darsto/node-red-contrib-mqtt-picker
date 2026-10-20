@@ -1,6 +1,6 @@
 const MqttDb = require("../nodes/db");
 
-module.exports = function setup(patterns) {
+module.exports = function setup(patterns, config = {}) {
   const types = {};
   const RED = { nodes: {
     createNode(node) {
@@ -17,6 +17,6 @@ module.exports = function setup(patterns) {
   MqttDb.inst = new MqttDb();
   for (const file of ["subscriber", "in", "out", "call"]) require("../nodes/" + file)(RED);
   const make = (type, config = {}) => new types["mqtt-db-" + type](config);
-  const bridge = make("subscriber", { fullTopics: patterns });
+  const bridge = make("subscriber", { fullTopics: patterns, ...config });
   return { db: MqttDb.inst, bridge, make };
 };

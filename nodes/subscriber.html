@@ -7,10 +7,15 @@
     <textarea id="node-input-fullTopics" rows="5" style="width:70%" placeholder="%prefix%/%topic%/&#10;%topic%/"></textarea>
   </div>
   <div class="form-tips">One pattern per line.<br>Use %topic% for a device and optional %prefix% for cmnd/stat/tele.<br>End each pattern with /.<br>Example: tasmota/%topic%/%prefix%/ or sensors/%topic%/.</div>
+  <div class="form-row">
+    <label for="node-input-ignoredTopics">Ignored Topics</label>
+    <textarea id="node-input-ignoredTopics" rows="5" style="width:70%" placeholder="tele/zigbee/&#10;homeassistant/"></textarea>
+  </div>
+  <div class="form-tips">One MQTT topic prefix per line.<br>Matching incoming messages are dropped and never stored.</div>
 </script>
 
 <script type="text/x-red" data-help-name="mqtt-db-subscriber">
-  <p>Use one subscriber connected to MQTT input and output. Configure the input to deliver decoded JSON values. Full Topic patterns control incoming parsing and outgoing routing. Prefix-bearing devices convert on/true and off/false values to 1 and 0 recursively.</p>
+  <p>Use one subscriber connected to MQTT input and output. Configure the input to deliver decoded JSON values. Full Topic patterns control incoming parsing and outgoing routing. Prefix-bearing devices convert on/true and off/false values to 1 and 0 recursively. Incoming topics starting with an Ignored Topics line are dropped.</p>
 </script>
 
 
@@ -28,6 +33,7 @@
     color: "burlywood",
     defaults: {
       fullTopics: { value: "%prefix%/%topic%/\n%topic%/", required: true },
+      ignoredTopics: { value: "" },
     },
     inputs: 1,
     outputs: 1,
